@@ -1,0 +1,1706 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="description" content="Review, organize, and export business spreadsheets from your browser.">
+  <meta name="application-name" content="Sheetflow">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Sheetflow">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Sheetflow - Spreadsheet Organizer</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --panel-raised: #f8fafc;
+      --line: #e4e7ec;
+      --line-strong: #cfd5dd;
+      --text: #1f2937;
+      --muted: #667085;
+      --faint: #98a2b3;
+      --amber: #2563eb;
+      --amber-soft: rgba(37, 99, 235, .09);
+      --mint: #15803d;
+      --mint-soft: rgba(21, 128, 61, .09);
+      --red: #b42318;
+      --red-soft: rgba(180, 35, 24, .08);
+      --shadow: 0 12px 30px rgba(16, 24, 40, .08);
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 320px; min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Segoe UI", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    button, input, select { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    button:disabled, select:disabled, input:disabled { cursor: not-allowed; opacity: .45; }
+    [hidden] { display: none !important; }
+
+    .app-shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; }
+    .sidebar {
+      display: flex; position: sticky; top: 0; flex-direction: column; height: 100vh;
+      padding: 25px 18px 18px; border-right: 1px solid var(--line); background: var(--panel);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 1px 8px 0; font-size: 15px; font-weight: 800; letter-spacing: .08em; }
+    .brand-mark {
+      display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgba(37, 99, 235, .35);
+      border-radius: 8px; color: var(--amber); background: var(--amber-soft); font-size: 15px;
+    }
+    .side-kicker, .field-label, .section-kicker, .stat-label {
+      color: var(--faint); font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase;
+    }
+    .side-kicker { margin: 27px 8px 11px; }
+    .drop-zone {
+      display: block; padding: 16px 14px 15px; border: 1px dashed rgba(37, 99, 235, .42); border-radius: var(--radius-md);
+      background: linear-gradient(145deg, rgba(37, 99, 235, .08), rgba(37, 99, 235, .025));
+      transition: border-color .16s, background .16s, transform .16s;
+    }
+    .drop-zone:hover, .drop-zone.is-dragging { border-color: var(--amber); background: rgba(37, 99, 235, .13); transform: translateY(-1px); }
+    .drop-zone.is-loading { opacity: .65; pointer-events: none; }
+    .drop-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .drop-icon, .file-card-icon, .empty-symbol { display: grid; place-items: center; }
+    .drop-icon { width: 32px; height: 32px; border-radius: 8px; color: var(--amber); background: var(--amber-soft); font-size: 18px; }
+    .file-types { padding: 3px 7px; border: 1px solid var(--line); border-radius: 99px; color: var(--faint); font-size: 9px; font-weight: 800; letter-spacing: .09em; }
+    .drop-zone strong { display: block; margin-top: 13px; font-size: 13px; }
+    .drop-zone p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .sidebar-divider { height: 1px; margin: 21px 8px 18px; background: var(--line); }
+    .mobile-settings-slot { display: none; }
+    .field-label { display: block; margin: 0 8px 8px; }
+    .field-help { margin: 7px 8px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .select-wrap { position: relative; }
+    .select-wrap::after { position: absolute; top: 50%; right: 13px; color: var(--muted); content: ">"; font-size: 12px; pointer-events: none; transform: translateY(-50%) rotate(90deg); }
+    select, .search-input {
+      width: 100%; min-height: 42px; border: 1px solid var(--line); border-radius: var(--radius-sm); outline: none;
+      color: var(--text); background: var(--panel); transition: border-color .16s, box-shadow .16s;
+    }
+    select { appearance: none; padding: 0 36px 0 12px; }
+    select:focus, .search-input:focus { border-color: rgba(37, 99, 235, .55); box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
+    .file-card { display: flex; align-items: center; gap: 10px; margin: 18px 2px 0; padding: 11px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel-raised); }
+    .file-card-icon { flex: 0 0 auto; width: 29px; height: 29px; border-radius: 8px; color: var(--mint); background: var(--mint-soft); font-size: 10px; font-weight: 900; }
+    .file-card-copy { min-width: 0; }
+    .file-card-copy strong, .file-card-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-card-copy strong { font-size: 11px; }
+    .file-card-copy span { margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .sidebar-foot { margin-top: auto; padding: 15px 8px 1px; color: var(--faint); font-size: 10px; line-height: 1.5; }
+    .engine-line, .top-status { display: flex; align-items: center; gap: 10px; }
+    .engine-line { gap: 7px; color: var(--muted); font-size: 10px; }
+    .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 4px var(--mint-soft); }
+    .status-dot.offline { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-soft); }
+
+     .main { min-width: 0; padding: 0 38px 42px; }
+     .topbar { display: flex; align-items: center; justify-content: space-between; min-height: 76px; gap: 16px; border-bottom: 1px solid var(--line); }
+     .top-status { color: var(--muted); font-size: 11px; }
+     .top-actions, .quick-actions, .selection-actions { display: flex; align-items: center; gap: 8px; }
+    .top-actions { flex-wrap: wrap; justify-content: flex-end; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 39px; padding: 0 14px; border: 1px solid transparent; border-radius: 9px; font-size: 12px; font-weight: 750; white-space: nowrap; transition: transform .16s, background .16s, color .16s, border-color .16s; }
+    .button:hover:not(:disabled) { transform: translateY(-1px); }
+    .button-primary { color: #ffffff; background: var(--amber); box-shadow: 0 5px 12px rgba(37, 99, 235, .18); }
+    .button-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .button-quiet { border-color: var(--line); color: var(--muted); background: var(--panel); }
+    .button-quiet:hover:not(:disabled), .button-ghost:hover:not(:disabled) { color: var(--text); background: var(--panel-raised); }
+    .button-ghost { color: var(--muted); background: transparent; }
+    .button-danger { border-color: rgba(180, 35, 24, .2); color: var(--red); background: var(--red-soft); }
+    .button-small { min-height: 31px; padding: 0 10px; font-size: 11px; }
+    .button-history { padding-right: 9px; padding-left: 9px; }
+    .button-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; min-height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 99px; color: var(--amber); background: var(--amber-soft); font-size: 10px; }
+
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; padding: 40px 0 31px; }
+    .hero-copy { max-width: 710px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--amber); font-size: 10px; font-weight: 850; letter-spacing: .18em; text-transform: uppercase; }
+    .eyebrow::before { width: 23px; height: 1px; background: var(--amber); content: ""; opacity: .7; }
+    h1 { max-width: 720px; margin: 15px 0 11px; font-size: clamp(30px, 3.5vw, 44px); font-weight: 720; letter-spacing: -.045em; line-height: 1.04; }
+    .hero-copy p { max-width: 580px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+    .hero-note { flex: 0 0 210px; padding: 15px 16px; border: 1px solid rgba(21, 128, 61, .18); border-left: 3px solid var(--mint); border-radius: var(--radius-sm); color: var(--muted); background: var(--mint-soft); font-size: 11px; line-height: 1.55; }
+    .hero-note strong { display: block; margin-bottom: 3px; color: var(--mint); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+    .stat-card { position: relative; min-height: 112px; padding: 17px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); }
+    .stat-card::after { position: absolute; right: -23px; bottom: -32px; width: 90px; height: 90px; border: 1px solid rgba(37, 99, 235, .12); border-radius: 50%; content: ""; }
+    .stat-card:nth-child(2)::after { border-color: rgba(180, 35, 24, .13); }
+    .stat-card:nth-child(3)::after { border-color: rgba(37, 99, 235, .15); }
+    .stat-card:nth-child(4)::after { border-color: rgba(21, 128, 61, .14); }
+    .stat-label { position: relative; z-index: 1; }
+    .stat-value { position: relative; z-index: 1; display: block; margin-top: 8px; font-size: 29px; font-weight: 720; letter-spacing: -.05em; line-height: 1; }
+    .stat-foot { position: relative; z-index: 1; display: block; margin-top: 9px; color: var(--faint); font-size: 10px; }
+
+    .automation-panel { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: 0 7px 20px rgba(16, 24, 40, .05); }
+    .automation-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 19px 21px 16px; border-bottom: 1px solid var(--line); }
+    .automation-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+    .automation-list { display: grid; gap: 8px; padding: 13px 21px 15px; }
+    .automation-empty { padding: 17px 14px; border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); color: var(--muted); background: var(--panel-raised); font-size: 12px; }
+    .automation-rule { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel); }
+    .automation-rule.is-disabled { opacity: .56; }
+    .rule-toggle { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: var(--mint-soft); }
+    .rule-toggle input { width: 15px; height: 15px; margin: 0; accent-color: var(--mint); cursor: pointer; }
+    .automation-rule-copy { min-width: 0; }
+    .automation-rule-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .automation-rule-copy p { margin: 3px 0 0; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .automation-rule-copy code { padding: 2px 5px; border-radius: 4px; color: var(--amber); background: var(--amber-soft); font-family: inherit; font-size: 10px; font-weight: 700; }
+    .automation-rule-meta { display: block; margin-top: 3px; color: var(--faint); font-size: 10px; }
+    .automation-rule-actions { display: flex; align-items: center; gap: 5px; }
+    .automation-rule-actions .button { min-height: 28px; padding: 0 8px; font-size: 10px; }
+    .automation-form { margin: 0 21px 18px; padding: 15px; border: 1px solid rgba(37, 99, 235, .2); border-radius: var(--radius-md); background: var(--amber-soft); }
+    .automation-form-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .automation-form-head strong { font-size: 12px; }
+    .automation-form-head span { color: var(--muted); font-size: 10px; }
+    .automation-form-grid { display: grid; grid-template-columns: minmax(170px, 1.2fr) repeat(3, minmax(130px, 1fr)); gap: 9px; }
+    .form-field { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 750; }
+    .form-hint { color: var(--faint); font-size: 10px; font-weight: 500; }
+    .form-field input, .form-field select { min-height: 37px; width: 100%; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); outline: none; color: var(--text); background: var(--panel); }
+    .form-field input:focus, .form-field select:focus { border-color: rgba(37, 99, 235, .55); box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
+    .automation-form-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
+
+    .workspace { margin-top: 28px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow); }
+    .workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 22px 23px 19px; border-bottom: 1px solid var(--line); }
+    h2 { margin: 5px 0 3px; font-size: 18px; font-weight: 720; letter-spacing: -.025em; }
+    .section-copy { margin: 0; color: var(--muted); font-size: 11px; }
+    .view-tabs { display: inline-flex; flex: 0 0 auto; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-raised); }
+    .view-tab { min-height: 31px; padding: 0 12px; border-radius: 7px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 750; }
+    .view-tab[aria-pressed="true"] { color: var(--amber); background: var(--panel); box-shadow: 0 2px 8px rgba(16, 24, 40, .1); }
+    .filters { display: grid; grid-template-columns: minmax(220px, 1.8fr) repeat(3, minmax(145px, 1fr)); gap: 9px; padding: 15px 23px; border-bottom: 1px solid var(--line); background: var(--panel-raised); }
+    .search-wrap { display: flex; position: relative; align-items: center; gap: 9px; }
+    .search-wrap::before { position: absolute; top: 12px; left: 13px; width: 11px; height: 11px; border: 1.5px solid var(--muted); border-radius: 50%; content: ""; opacity: .8; pointer-events: none; }
+    .search-wrap::after { position: absolute; top: 23px; left: 23px; width: 6px; height: 1.5px; background: var(--muted); content: ""; opacity: .8; pointer-events: none; transform: rotate(45deg); }
+    .search-wrap .search-input { width: auto; min-width: 0; flex: 1 1 auto; padding: 0 12px 0 37px; }
+    .search-input::placeholder { color: var(--faint); }
+    .search-hidden-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-height: 42px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--muted); background: var(--panel); font-size: 11px; white-space: nowrap; cursor: pointer; }
+    .search-hidden-toggle:hover { border-color: var(--line-strong); color: var(--text); background: var(--panel-raised); }
+    .search-hidden-toggle input { width: 15px; height: 15px; margin: 0; accent-color: var(--amber); cursor: pointer; }
+    .quick-bar, .selection-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 10px 23px; border-bottom: 1px solid var(--line); }
+    .quick-copy { color: var(--faint); font-size: 11px; }
+    .quick-copy strong { color: var(--muted); font-weight: 650; }
+    .selection-bar { border-bottom-color: rgba(37, 99, 235, .18); background: var(--amber-soft); }
+    .selection-count { color: var(--amber); font-size: 11px; font-weight: 750; }
+
+    .table-stage { position: relative; min-height: 230px; }
+    .table-scroll { width: 100%; overflow-x: auto; scrollbar-color: rgba(37, 99, 235, .32) transparent; }
+    #tableScroll { max-height: min(68vh, 760px); overflow: auto; }
+    table { width: 100%; min-width: 700px; border-collapse: separate; border-spacing: 0; text-align: left; }
+    th { position: sticky; top: 0; z-index: 2; padding: 12px 13px; border-bottom: 1px solid var(--line-strong); color: var(--faint); background: #f8fafc; font-size: 9px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+    td { max-width: 360px; padding: 12px 13px; border-bottom: 1px solid var(--line); color: var(--text); font-size: 12px; vertical-align: middle; }
+    tbody tr { transition: background .14s; }
+    tbody tr:hover { background: rgba(37, 99, 235, .04); }
+    tbody tr.is-hidden { background: rgba(180, 35, 24, .035); }
+    tbody tr.is-hidden td { color: #7f8794; }
+    .row-number, .row-number-cell { width: 56px; color: var(--faint); font-variant-numeric: tabular-nums; text-align: right; }
+    .check-cell, .check-head { width: 42px; padding-right: 3px; padding-left: 13px; }
+    .check-cell input, .check-head input { width: 15px; height: 15px; margin: 0; accent-color: var(--amber); cursor: pointer; }
+    .cell-value { display: block; max-width: 370px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    td[data-cell-row] { cursor: cell; }
+    td[data-cell-row]:hover { background: rgba(37, 99, 235, .035); }
+    td.cell-selected { outline: 2px solid rgba(37, 99, 235, .55); outline-offset: -2px; background: var(--amber-soft); }
+    .cell-empty { color: var(--faint); font-size: 11px; font-style: italic; }
+    .match-badge, .muted-badge, .hidden-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border-radius: 6px; font-size: 10px; font-weight: 750; white-space: nowrap; }
+    .match-badge { color: var(--amber); background: var(--amber-soft); }
+    .muted-badge { color: var(--faint); background: #f2f4f7; }
+    .hidden-badge { margin-left: 5px; color: var(--red); background: var(--red-soft); }
+    .action-cell { width: 176px; text-align: right; white-space: nowrap; }
+    .row-action { min-height: 29px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); background: transparent; font-size: 10px; font-weight: 750; }
+    .action-cell .row-action + .row-action { margin-left: 5px; }
+    .row-action:hover { border-color: var(--line-strong); color: var(--text); background: var(--panel-raised); }
+    .row-action.restore { border-color: rgba(21, 128, 61, .22); color: var(--mint); background: var(--mint-soft); }
+    .row-action.group-action { border-color: rgba(37, 99, 235, .22); color: var(--amber); background: var(--amber-soft); }
+    .row-action.group-action.restore { border-color: rgba(21, 128, 61, .22); color: var(--mint); background: var(--mint-soft); }
+    .group-row td { padding-top: 14px; padding-bottom: 14px; background: var(--panel-raised); }
+    .group-row.group-fully-hidden td { color: #828b99; }
+    .expand-button { display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); background: transparent; font-size: 15px; line-height: 1; transition: transform .16s, color .16s, background .16s; }
+    .expand-button[aria-expanded="true"] { color: var(--amber); background: var(--amber-soft); transform: rotate(90deg); }
+    .group-product { display: flex; align-items: center; gap: 8px; min-width: 220px; }
+    .group-product strong { overflow: hidden; color: var(--text); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .group-count { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 20px; padding: 0 6px; border-radius: 5px; color: var(--amber); background: var(--amber-soft); font-size: 9px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+    .group-count.unique { color: var(--faint); background: #f2f4f7; }
+    .group-meta { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .group-lines { color: var(--faint); font-size: 10px; line-height: 1.55; }
+    .details-row:hover { background: transparent; }
+    .details-row > td { padding: 0; background: #f5f7fa; }
+    .group-details { margin: 0 18px 16px 96px; padding: 13px 14px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+    .details-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; color: var(--faint); font-size: 9px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+    .mini-table { min-width: 580px; }
+    .mini-table th { position: static; padding: 7px 9px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: transparent; font-size: 8px; }
+    .mini-table td { padding: 8px 9px; font-size: 11px; }
+    .mini-table .action-cell { width: 84px; }
+
+    .empty-state { display: grid; min-height: 300px; place-items: center; padding: 35px 22px; text-align: center; }
+    .empty-inner { max-width: 390px; }
+    .empty-symbol { width: 46px; height: 46px; margin: 0 auto 14px; border: 1px solid var(--line-strong); border-radius: 14px 14px 14px 4px; color: var(--amber); background: var(--amber-soft); font-size: 18px; }
+    .empty-state h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -.02em; }
+    .empty-state p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+     .workspace-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding: 13px 23px 15px; border-top: 1px solid var(--line); color: var(--faint); font-size: 10px; }
+     .workspace-foot strong { color: var(--muted); font-weight: 650; }
+     .workspace-maker { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: .04em; }
+     .workspace-maker img { width: 20px; height: 20px; object-fit: contain; opacity: .65; }
+    .page-controls { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); white-space: nowrap; }
+    .page-button { min-height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: var(--panel); font-size: 10px; font-weight: 700; }
+    .page-button:hover:not(:disabled) { border-color: var(--line-strong); color: var(--text); background: var(--panel-raised); }
+    .toast { position: fixed; right: 22px; bottom: 22px; z-index: 20; max-width: min(360px, calc(100vw - 44px)); padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); background: var(--panel); box-shadow: var(--shadow); font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .18s, transform .18s; }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: rgba(21, 128, 61, .34); }
+    .toast.error { border-color: rgba(180, 35, 24, .38); color: #912018; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 1050px) {
+      .main { padding-right: 24px; padding-left: 24px; }
+      .filters { grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(125px, 1fr)); padding-right: 17px; padding-left: 17px; }
+      .workspace-head, .quick-bar, .selection-bar, .workspace-foot { padding-right: 17px; padding-left: 17px; }
+      .group-details { margin-left: 65px; }
+    }
+    @media (max-width: 860px) {
+      .app-shell { display: block; }
+      .sidebar { position: relative; width: 100%; height: auto; padding: 18px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .side-kicker { margin-top: 20px; }
+      .sidebar-foot { display: none; }
+      .main { padding: 0 18px 30px; }
+      .topbar { position: sticky; top: 0; z-index: 10; min-height: 67px; background: var(--bg); }
+      .hero { align-items: flex-start; flex-direction: column; gap: 20px; padding-top: 36px; }
+      .hero-note { flex-basis: auto; max-width: 380px; }
+      .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .search-wrap { grid-column: 1 / -1; }
+      .automation-panel { scroll-margin-top: 78px; }
+      .automation-head { align-items: flex-start; flex-direction: column; }
+      .automation-actions { justify-content: flex-start; }
+      .automation-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 570px) {
+      .top-actions .button-ghost { display: none; }
+      .topbar { min-height: 62px; gap: 8px; }
+       .top-status { max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .top-actions { flex: 0 0 auto; gap: 5px; }
+      .top-actions .button { min-height: 38px; padding-right: 10px; padding-left: 10px; }
+      .hero { display: none; }
+      .sidebar > .brand, .sidebar > .side-kicker, .sidebar > .file-card, .sidebar > .sidebar-foot { display: none; }
+      .sidebar-settings-slot { display: none; }
+      .mobile-settings-slot { display: none; }
+      .mobile-settings-slot .sidebar-settings { padding: 12px 12px 2px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); }
+      .mobile-settings-slot .sidebar-divider:first-child { margin-top: 0; }
+      h1 { font-size: 35px; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat-card { min-height: 100px; padding: 14px; }
+      .stat-value { font-size: 25px; }
+      .workspace { margin-top: 20px; border-radius: 16px; }
+      .workspace-head { align-items: flex-start; flex-direction: column; gap: 15px; }
+      .view-tabs { width: 100%; }
+      .view-tab { width: 50%; }
+      .filters { grid-template-columns: 1fr; padding-top: 12px; padding-bottom: 12px; }
+      .search-wrap { grid-column: auto; }
+      .quick-bar, .selection-bar, .workspace-foot { align-items: flex-start; flex-direction: column; }
+      .quick-actions, .selection-actions { justify-content: flex-start; flex-wrap: wrap; }
+      .button-small, .page-button { min-height: 37px; }
+       .workspace-foot { gap: 5px; }
+       .workspace-maker { margin-left: 0; }
+      .group-details { margin-right: 8px; margin-left: 8px; }
+      .automation-head, .automation-list, .automation-form { padding-right: 14px; padding-left: 14px; }
+      .automation-form { margin-right: 8px; margin-left: 8px; }
+      .automation-form-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .automation-form-grid { grid-template-columns: 1fr; }
+      .automation-actions { width: 100%; }
+      .automation-actions .button { flex: 1 1 0; }
+      .automation-rule { grid-template-columns: auto minmax(0, 1fr); }
+      .automation-rule-actions { grid-column: 2; justify-content: flex-start; }
+      .automation-rule-copy strong, .automation-rule-copy p { white-space: normal; }
+      .search-wrap { flex-wrap: wrap; }
+      .search-wrap .search-input { flex-basis: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">+</span><span>SHEETFLOW</span></div>
+      <div class="side-kicker">Workspace</div>
+      <label class="drop-zone" id="dropZone" for="fileInput">
+        <div class="drop-topline"><span class="drop-icon">+</span><span class="file-types">XLSX / CSV</span></div>
+        <strong>Import a spreadsheet</strong>
+        <p>Choose an Excel or CSV file to review and organize.</p>
+      </label>
+      <input class="sr-only" id="fileInput" type="file" accept=".xlsx,.xls,.csv,.tsv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <div class="sidebar-settings-slot" id="sidebarSettingsSlot">
+        <div class="sidebar-settings" id="sidebarSettings">
+          <div class="sidebar-divider"></div>
+          <label class="field-label" for="sheetSelect">Worksheet</label>
+          <div class="select-wrap"><select id="sheetSelect" disabled><option>Import a file first</option></select></div>
+          <div class="sidebar-divider"></div>
+          <label class="field-label" for="groupFieldSelect">Grouping field</label>
+          <div class="select-wrap"><select id="groupFieldSelect" disabled><option>Import a file first</option></select></div>
+          <p class="field-help" id="groupFieldHelp">Choose any column for a location, department, store, project, category, or another business grouping.</p>
+        </div>
+      </div>
+      <div class="file-card" id="fileCard" hidden>
+        <span class="file-card-icon">XLS</span>
+        <div class="file-card-copy"><strong id="fileName">No file loaded</strong><span id="fileMeta">Ready for a sheet</span></div>
+      </div>
+      <div class="sidebar-foot">
+        <div class="engine-line"><span class="status-dot" id="engineDot"></span><span id="engineStatus">Spreadsheet engine ready</span></div>
+        <div style="margin-top: 8px;">Your file stays in this browser. Nothing is uploaded.</div>
+      </div>
+    </aside>
+
+     <main class="main">
+         <header class="topbar">
+          <div class="top-status"><span class="status-dot" id="workspaceDot"></span><span id="topStatus">Waiting for a spreadsheet</span></div>
+          <div class="top-actions"><button class="button button-ghost button-history" id="undoButton" type="button" title="Undo (Ctrl+Z)" disabled>Undo</button><button class="button button-ghost button-history" id="redoButton" type="button" title="Redo (Ctrl+Y)" disabled>Redo</button><button class="button button-quiet" id="automationButton" type="button" aria-expanded="false">Automation <span class="button-count" id="automationRuleCount">0</span></button><button class="button button-ghost" id="clearButton" type="button" disabled>Clear workspace</button><button class="button button-primary" id="exportXlsxButton" type="button" disabled>Export XLSX</button></div>
+        </header>
+
+       <div class="mobile-settings-slot" id="mobileSettingsSlot"></div>
+
+       <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">Spreadsheet workspace</div>
+          <h1>Review, organize, and export your spreadsheet.</h1>
+          <p>Use it for inventory, customer lists, projects, orders, schedules, or any other repeated-row spreadsheet. Import your file, review records across a business field, hide rows you do not want to carry forward, and export a clean workbook without changing the original order of the rows you keep.</p>
+        </div>
+        <div class="hero-note"><strong>Export behavior</strong>Search, sorting, and the grouped view only change what you see. Export always includes every row that has not been hidden.</div>
+      </section>
+
+      <section class="stats-grid" aria-label="Sheet summary">
+        <article class="stat-card"><span class="stat-label">Visible rows</span><strong class="stat-value" id="visibleStat">0</strong><span class="stat-foot" id="visibleStatFoot">Nothing imported yet</span></article>
+        <article class="stat-card"><span class="stat-label">Hidden rows</span><strong class="stat-value" id="hiddenStat">0</strong><span class="stat-foot" id="hiddenStatFoot">Ready to clean</span></article>
+        <article class="stat-card"><span class="stat-label">Groups found</span><strong class="stat-value" id="duplicateStat">0</strong><span class="stat-foot" id="duplicateStatFoot">Same record values</span></article>
+         <article class="stat-card"><span class="stat-label">Value in view</span><strong class="stat-value" id="quantityStat">-</strong><span class="stat-foot" id="quantityStatFoot">No value field selected</span></article>
+      </section>
+
+      <section class="automation-panel" id="automationPanel" hidden aria-labelledby="automationTitle">
+        <div class="automation-head">
+          <div><div class="section-kicker">Repeatable cleanup</div><h2 id="automationTitle">Automation rules</h2><p class="section-copy" id="automationSummary">Create rules for the rows you remove every day.</p></div>
+          <div class="automation-actions"><button class="button button-quiet button-small" id="runAutomationButton" type="button" disabled>Run rules</button><button class="button button-primary button-small" id="addRuleButton" type="button">New rule</button><button class="button button-ghost button-small" id="closeAutomationButton" type="button">Close</button></div>
+        </div>
+        <div class="automation-list" id="automationList"></div>
+        <form class="automation-form" id="automationForm" hidden>
+          <div class="automation-form-head"><strong id="ruleFormTitle">New automation rule</strong><span>Rules hide matching rows; they never delete data.</span></div>
+          <div class="automation-form-grid">
+            <label class="form-field"><span>Rule name</span><input id="ruleNameInput" type="text" maxlength="80" placeholder="Hide unwanted records"></label>
+            <label class="form-field"><span>Column</span><select id="ruleColumnSelect"></select></label>
+            <label class="form-field"><span>Condition</span><select id="ruleOperatorSelect"><option value="contains">Contains</option><option value="equals">Equals</option></select></label>
+            <label class="form-field"><span>Value</span><input id="ruleValueInput" type="text" maxlength="120" placeholder="TEST or <empty>"><small class="form-hint">Use &lt;empty&gt; to match blank cells.</small></label>
+          </div>
+          <div class="automation-form-actions"><button class="button button-ghost button-small" id="cancelRuleButton" type="button">Cancel</button><button class="button button-primary button-small" id="saveRuleButton" type="submit">Save rule</button></div>
+        </form>
+      </section>
+
+      <section class="workspace" aria-label="Spreadsheet workspace">
+        <div class="workspace-head">
+          <div><div class="section-kicker">Working table</div><h2 id="tableTitle">Spreadsheet rows</h2><p class="section-copy" id="tableSubtitle">Import your spreadsheet to begin.</p></div>
+          <div class="view-tabs" role="group" aria-label="Table view"><button class="view-tab" type="button" data-view="rows" aria-pressed="true">Rows</button><button class="view-tab" type="button" data-view="groups" aria-pressed="false">Grouped</button></div>
+        </div>
+        <div class="filters">
+          <div class="search-wrap"><label class="sr-only" for="searchInput">Search spreadsheet</label><input class="search-input" id="searchInput" type="search" placeholder="Search record, grouping field, or any cell..." disabled><label class="search-hidden-toggle" for="includeHidden"><input id="includeHidden" type="checkbox" disabled><span>Include hidden</span></label></div>
+          <div class="select-wrap"><label class="sr-only" for="scopeSelect">Rows to show</label><select id="scopeSelect" disabled><option value="active">Active rows</option><option value="duplicates">Duplicate records</option><option value="hidden">Hidden rows</option><option value="all">All rows</option></select></div>
+          <div class="select-wrap"><label class="sr-only" for="duplicateMode">Grouping mode</label><select id="duplicateMode" disabled><option value="product">Group by record</option><option value="location">Group by selected field</option><option value="product-location">Group by record + selected field</option><option value="exact">Group by exact row</option></select></div>
+          <div class="select-wrap"><label class="sr-only" for="sortSelect">Sort displayed rows</label><select id="sortSelect" disabled><option value="original">Original sheet order</option><option value="product">Record A-Z</option><option value="quantity">Value high-low</option></select></div>
+        </div>
+        <div class="quick-bar"><div class="quick-copy" id="quickCopy"><strong>Nothing to organize yet.</strong></div><div class="quick-actions"><button class="button button-quiet button-small" id="hideZeroButton" type="button" disabled>Hide zero values</button><button class="button button-quiet button-small" id="restoreAllButton" type="button" disabled>Restore all</button><button class="button button-quiet button-small" id="exportCsvButton" type="button" disabled>Export CSV</button></div></div>
+        <div class="selection-bar" id="selectionBar" hidden><span class="selection-count" id="selectionCount">0 selected</span><div class="selection-actions"><button class="button button-quiet button-small" id="hideSelectedButton" type="button">Hide selected</button><button class="button button-quiet button-small" id="restoreSelectedButton" type="button">Restore selected</button><button class="button button-ghost button-small" id="clearSelectionButton" type="button">Clear selection</button></div></div>
+        <div class="table-stage">
+          <div class="table-scroll" id="tableScroll" hidden><table id="stockTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div>
+          <div class="empty-state" id="emptyState"><div class="empty-inner"><div class="empty-symbol">+</div><h3 id="emptyTitle">Bring in your spreadsheet</h3><p id="emptyCopy">Drop an XLSX or CSV file into the panel on the left. The organizer will detect useful fields automatically, and you can choose any columns for your workflow.</p></div></div>
+        </div>
+         <div class="workspace-foot"><span id="resultCount">No rows loaded</span><div class="page-controls" id="pageControls" hidden><button class="page-button" id="previousPageButton" type="button">Previous</button><span id="pageStatus">Page 1 of 1</span><button class="page-button" id="nextPageButton" type="button">Next</button></div><span id="exportHint"><strong>Tip:</strong> hide rows first, then export the visible data.</span><div class="workspace-maker"><img src="../networKING.svg" alt="networKING logo"><span>networKING</span></div></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (id) => document.getElementById(id);
+      const refs = {
+        fileInput: $("fileInput"), dropZone: $("dropZone"), sheetSelect: $("sheetSelect"),
+        fileCard: $("fileCard"), fileName: $("fileName"), fileMeta: $("fileMeta"), sidebarSettings: $("sidebarSettings"), sidebarSettingsSlot: $("sidebarSettingsSlot"), mobileSettingsSlot: $("mobileSettingsSlot"), groupFieldSelect: $("groupFieldSelect"), groupFieldHelp: $("groupFieldHelp"),
+        engineDot: $("engineDot"), engineStatus: $("engineStatus"), workspaceDot: $("workspaceDot"),
+        topStatus: $("topStatus"), undoButton: $("undoButton"), redoButton: $("redoButton"), automationButton: $("automationButton"),
+        automationRuleCount: $("automationRuleCount"), clearButton: $("clearButton"), exportXlsxButton: $("exportXlsxButton"),
+        visibleStat: $("visibleStat"), visibleStatFoot: $("visibleStatFoot"), hiddenStat: $("hiddenStat"),
+        hiddenStatFoot: $("hiddenStatFoot"), duplicateStat: $("duplicateStat"), duplicateStatFoot: $("duplicateStatFoot"),
+        quantityStat: $("quantityStat"), quantityStatFoot: $("quantityStatFoot"), tableTitle: $("tableTitle"),
+        tableSubtitle: $("tableSubtitle"), viewTabs: Array.from(document.querySelectorAll("[data-view]")),
+        searchInput: $("searchInput"), includeHidden: $("includeHidden"), scopeSelect: $("scopeSelect"), duplicateMode: $("duplicateMode"),
+        sortSelect: $("sortSelect"), quickCopy: $("quickCopy"), hideZeroButton: $("hideZeroButton"),
+        restoreAllButton: $("restoreAllButton"), exportCsvButton: $("exportCsvButton"), selectionBar: $("selectionBar"),
+        selectionCount: $("selectionCount"), hideSelectedButton: $("hideSelectedButton"),
+        restoreSelectedButton: $("restoreSelectedButton"), clearSelectionButton: $("clearSelectionButton"),
+        tableScroll: $("tableScroll"), tableHead: $("tableHead"), tableBody: $("tableBody"), emptyState: $("emptyState"),
+        emptyTitle: $("emptyTitle"), emptyCopy: $("emptyCopy"), resultCount: $("resultCount"), exportHint: $("exportHint"),
+        pageControls: $("pageControls"), previousPageButton: $("previousPageButton"), pageStatus: $("pageStatus"), nextPageButton: $("nextPageButton"),
+        automationPanel: $("automationPanel"), automationSummary: $("automationSummary"), automationList: $("automationList"),
+        runAutomationButton: $("runAutomationButton"), addRuleButton: $("addRuleButton"), closeAutomationButton: $("closeAutomationButton"),
+        automationForm: $("automationForm"), ruleFormTitle: $("ruleFormTitle"), ruleNameInput: $("ruleNameInput"), ruleColumnSelect: $("ruleColumnSelect"),
+        ruleOperatorSelect: $("ruleOperatorSelect"), ruleValueInput: $("ruleValueInput"), cancelRuleButton: $("cancelRuleButton"), saveRuleButton: $("saveRuleButton"), toast: $("toast")
+      };
+
+      const state = {
+        fileName: "", sourceType: "", workbook: null, sheetStates: new Map(), currentSheet: "",
+        view: "rows", scope: "active", sort: "original", duplicateMode: "product", search: "", searchNormalized: "", includeHidden: false,
+        expandedGroups: new Set(), selectedIds: new Set(), selectedCell: null, toastTimer: null,
+        loading: false, loadingFileName: "", page: 1, pageSize: 250, automationRules: [], automationPanelOpen: false, editingRuleId: null,
+        history: [], historyIndex: -1
+      };
+
+      const headerHints = ["location", "store", "branch", "site", "warehouse", "department", "division", "region", "area", "room", "section", "zone", "project", "team", "category", "customer", "client", "order", "case", "ticket", "record", "product", "item", "sku", "description", "quantity", "qty", "stock", "units", "amount", "total", "value", "balance", "count", "name"];
+      const automationStorageKey = "stockflow-automation-rules-v1";
+      const emptyToken = "<empty>";
+
+      function hasEngine() {
+        return typeof window.XLSX !== "undefined" && window.XLSX && window.XLSX.utils;
+      }
+
+      function loadAutomationRules() {
+        try {
+          if (typeof localStorage === "undefined") return [];
+          const saved = JSON.parse(localStorage.getItem(automationStorageKey) || "[]");
+          if (!Array.isArray(saved)) return [];
+          return saved.filter((rule) => rule && typeof rule === "object").map((rule) => ({
+            id: String(rule.id || `rule-${Date.now()}-${Math.random().toString(36).slice(2)}`),
+            name: String(rule.name || "Untitled rule"), column: String(rule.column || "product"),
+            columnLabel: String(rule.columnLabel || "Record"), operator: rule.operator === "equals" ? "equals" : "contains",
+            value: String(rule.value || ""), enabled: rule.enabled !== false, lastAffected: Number(rule.lastAffected) || 0,
+            lastRunAt: String(rule.lastRunAt || "")
+          }));
+        } catch (error) {
+          console.warn("Automation rules could not be loaded.", error);
+          return [];
+        }
+      }
+
+      function saveAutomationRules() {
+        try {
+          if (typeof localStorage !== "undefined") localStorage.setItem(automationStorageKey, JSON.stringify(state.automationRules));
+        } catch (error) {
+          console.warn("Automation rules could not be saved.", error);
+        }
+      }
+
+      function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, (character) => {
+          if (character === "&") return "&amp;";
+          if (character === "<") return "&lt;";
+          if (character === ">") return "&gt;";
+          if (character === "\"") return "&quot;";
+          return "&#39;";
+        });
+      }
+
+      function valueToString(value) {
+        if (value === null || value === undefined) return "";
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return value.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+        }
+        return String(value);
+      }
+
+      function normalizeText(value) {
+        return valueToString(value).normalize("NFKC").toLocaleLowerCase().replace(/\s+/g, " ").trim();
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(value);
+      }
+
+      function parseNumber(value) {
+        if (typeof value === "number" && Number.isFinite(value)) return value;
+        const text = valueToString(value).replace(/,/g, "").trim();
+        if (!text) return null;
+        const number = Number(text);
+        return Number.isFinite(number) ? number : null;
+      }
+
+      function formatCell(value) {
+        const text = valueToString(value);
+        return text ? `<span class="cell-value" title="${escapeHTML(text)}">${escapeHTML(text)}</span>` : `<span class="cell-empty">${escapeHTML(emptyToken)}</span>`;
+      }
+
+      function padRow(row, width) {
+        const result = Array.isArray(row) ? row.slice(0, width) : [];
+        while (result.length < width) result.push("");
+        return result;
+      }
+
+      function isBlankRow(row) {
+        return row.every((value) => !valueToString(value).trim());
+      }
+
+      function detectHeaderIndex(aoa) {
+        let bestIndex = 0;
+        let bestScore = 0;
+        for (let index = 0; index < Math.min(aoa.length, 15); index += 1) {
+          const text = (aoa[index] || []).map(valueToString).join(" ").toLocaleLowerCase();
+          const score = headerHints.reduce((total, hint) => total + (text.includes(hint) ? 1 : 0), 0);
+          if (score > bestScore) {
+            bestIndex = index;
+            bestScore = score;
+          }
+        }
+        if (bestScore > 0) return bestIndex;
+        const firstPopulated = aoa.findIndex((row) => (row || []).filter((value) => valueToString(value).trim()).length > 1);
+        return firstPopulated >= 0 ? firstPopulated : 0;
+      }
+
+      function makeHeaderLabels(values, width) {
+        const seen = new Map();
+        return values.slice(0, width).map((value, index) => {
+          const base = valueToString(value).trim() || `Column ${index + 1}`;
+          const count = (seen.get(base) || 0) + 1;
+          seen.set(base, count);
+          return count === 1 ? base : `${base} (${count})`;
+        });
+      }
+
+      function findColumn(labels, expressions) {
+        return labels.findIndex((label) => expressions.some((expression) => expression.test(label)));
+      }
+
+      function buildSheetState(name, sourceSheet, csvRows) {
+        let aoa = csvRows;
+        let sourceWidth = 1;
+        if (sourceSheet) {
+          aoa = window.XLSX.utils.sheet_to_json(sourceSheet, { header: 1, defval: "", raw: true, blankrows: true });
+          if (sourceSheet["!ref"]) {
+            const range = window.XLSX.utils.decode_range(sourceSheet["!ref"]);
+            sourceWidth = range.e.c - range.s.c + 1;
+          }
+        }
+        aoa = Array.isArray(aoa) ? aoa : [];
+        const width = Math.max(sourceWidth, 1, ...aoa.map((row) => Array.isArray(row) ? row.length : 0));
+        const headerIndex = detectHeaderIndex(aoa);
+        const headerValues = padRow(aoa[headerIndex] || [], width);
+        const headers = makeHeaderLabels(headerValues, width);
+        const prefixRows = aoa.slice(0, headerIndex).map((row) => padRow(row, width));
+        const rows = aoa.slice(headerIndex + 1).map((row, index) => {
+          const values = padRow(row, width);
+          return { id: `${name}-${headerIndex + index + 2}`, values, searchText: values.map(normalizeText).join(" "), emptyColumns: values.map((value) => !valueToString(value).trim()), sourceIndex: index, sourceRowNumber: headerIndex + index + 2, blank: isBlankRow(values), hidden: false };
+        });
+         const product = findColumn(headers, [/product/i, /item/i, /sku/i, /description/i, /customer/i, /client/i, /order/i, /case/i, /ticket/i, /service/i, /account/i, /asset/i, /job/i, /claim/i, /reference/i, /record/i, /code/i, /^name/i, /^id$/i]);
+         const location = findColumn(headers, [/location/i, /store/i, /branch/i, /site/i, /warehouse/i, /department/i, /division/i, /region/i, /area/i, /room/i, /section/i, /zone/i, /project/i, /team/i]);
+         const quantity = findColumn(headers, [/quantity/i, /qty/i, /stock/i, /on[ -]?hand/i, /units?/i, /count/i, /amount/i, /total/i, /value/i, /balance/i, /cost/i, /price/i, /hours?/i, /score/i, /rate/i, /percent/i]);
+        return {
+          name, sourceSheet, width, headerIndex, headerValues, headers, prefixRows, rows, groupCache: new Map(),
+           productColumn: product >= 0 ? product : null, locationColumn: location >= 0 ? location : null,
+          quantityColumn: quantity >= 0 ? quantity : null
+        };
+      }
+
+      function detectDelimiter(text) {
+        const firstLine = text.split(/\r?\n/, 1)[0];
+        return [",", "\t", ";"].reduce((best, candidate) => {
+          const score = firstLine.split(candidate).length;
+          return score > best.score ? { candidate, score } : best;
+        }, { candidate: ",", score: 0 }).candidate;
+      }
+
+      function parseDelimited(text, delimiter) {
+        const rows = [];
+        let row = [], field = "", quoted = false;
+        for (let index = 0; index < text.length; index += 1) {
+          const character = text[index];
+          if (quoted) {
+            if (character === '"' && text[index + 1] === '"') { field += '"'; index += 1; }
+            else if (character === '"') quoted = false;
+            else field += character;
+          } else if (character === '"' && field.length === 0) quoted = true;
+          else if (character === delimiter) { row.push(field); field = ""; }
+          else if (character === "\r" || character === "\n") {
+            row.push(field); field = "";
+            if (row.some((value) => value !== "") || row.length > 1) rows.push(row);
+            row = [];
+            if (character === "\r" && text[index + 1] === "\n") index += 1;
+          } else field += character;
+        }
+        if (field !== "" || row.length > 0) {
+          row.push(field);
+          if (row.some((value) => value !== "") || row.length > 1) rows.push(row);
+        }
+        return rows;
+      }
+
+      function currentSheet() { return state.sheetStates.get(state.currentSheet) || null; }
+
+      function placeSidebarSettings() {
+        const isPhone = window.matchMedia && window.matchMedia("(max-width: 570px)").matches;
+        const target = isPhone ? refs.mobileSettingsSlot : refs.sidebarSettingsSlot;
+        if (target && refs.sidebarSettings.parentElement !== target) target.appendChild(refs.sidebarSettings);
+      }
+
+      function columnLabel(sheet, columnIndex, fallback) {
+        if (!sheet || columnIndex === null || columnIndex === undefined) return fallback;
+        return valueToString(sheet.headers[columnIndex]).trim() || fallback;
+      }
+
+      function productFieldLabel(sheet) {
+        return columnLabel(sheet, sheet ? sheet.productColumn : null, "Record");
+      }
+
+      function groupingFieldLabel(sheet) {
+        return columnLabel(sheet, sheet ? sheet.locationColumn : null, "Grouping field");
+      }
+
+      function valueFieldLabel(sheet) {
+        return columnLabel(sheet, sheet ? sheet.quantityColumn : null, "Value");
+      }
+
+      function refreshGroupingFieldOptions() {
+        const sheet = currentSheet();
+        refs.groupFieldSelect.innerHTML = "";
+        if (!sheet) {
+          refs.groupFieldSelect.add(new Option("Import a file first", ""));
+          refs.groupFieldSelect.disabled = true;
+          refs.groupFieldHelp.textContent = "Choose any column to use as a location, department, store, project, or another business grouping.";
+          return;
+        }
+        refs.groupFieldSelect.add(new Option("No grouping field", ""));
+        sheet.headers.forEach((header, index) => refs.groupFieldSelect.add(new Option(valueToString(header).trim() || `Column ${index + 1}`, String(index))));
+        refs.groupFieldSelect.value = sheet.locationColumn === null ? "" : String(sheet.locationColumn);
+        refs.groupFieldSelect.disabled = state.loading;
+        refs.groupFieldHelp.textContent = sheet.locationColumn === null
+          ? "No grouping field selected. Choose a column to group by location, department, store, project, or another business value."
+          : `Using "${groupingFieldLabel(sheet)}" for grouping and matching rules on this worksheet.`;
+      }
+
+      function updateGroupingModeOptions(sheet) {
+        const itemLabel = productFieldLabel(sheet);
+        const groupingLabel = groupingFieldLabel(sheet);
+        const productOption = refs.duplicateMode.querySelector('[value="product"]');
+        const groupingOption = refs.duplicateMode.querySelector('[value="location"]');
+        const combinedOption = refs.duplicateMode.querySelector('[value="product-location"]');
+        if (productOption) productOption.textContent = `Group by ${itemLabel}`;
+        if (groupingOption) groupingOption.textContent = `Group by ${groupingLabel}`;
+        if (combinedOption) combinedOption.textContent = `Group by ${itemLabel} + ${groupingLabel}`;
+      }
+
+      function updateSortOptions(sheet) {
+        const recordOption = refs.sortSelect.querySelector('[value="product"]');
+        const valueOption = refs.sortSelect.querySelector('[value="quantity"]');
+        if (recordOption) recordOption.textContent = `${productFieldLabel(sheet)} A-Z`;
+        if (valueOption) {
+          valueOption.textContent = `${valueFieldLabel(sheet)} high-low`;
+          valueOption.disabled = !sheet || sheet.quantityColumn === null;
+        }
+      }
+
+      function productText(row, sheet) {
+        if (sheet.productColumn !== null) return valueToString(row.values[sheet.productColumn]);
+        return row.values.filter((value, index) => index !== sheet.locationColumn && index !== sheet.quantityColumn).map(valueToString).filter((value) => value.trim()).join(" | ");
+      }
+
+      function groupingText(row, sheet) {
+        return sheet.locationColumn === null ? "" : valueToString(row.values[sheet.locationColumn]);
+      }
+
+      function groupingLabel(sheet = currentSheet()) {
+        if (state.duplicateMode === "location") return `${groupingFieldLabel(sheet)} values`;
+        if (state.duplicateMode === "product-location") return `${productFieldLabel(sheet)} + ${groupingFieldLabel(sheet)}`;
+        if (state.duplicateMode === "exact") return "exact matching rows";
+        return `${productFieldLabel(sheet)} values`;
+      }
+
+      function duplicateKey(row, sheet) {
+        if (state.duplicateMode === "exact") {
+          const key = row.values.map(normalizeText).join(String.fromCharCode(31));
+          return key || `blank-row-${row.id}`;
+        }
+        if (state.duplicateMode === "location") {
+          const key = normalizeText(groupingText(row, sheet));
+          return key || `blank-grouping-field-${row.id}`;
+        }
+        if (state.duplicateMode === "product-location") {
+          const key = [normalizeText(productText(row, sheet)), normalizeText(groupingText(row, sheet))].join(String.fromCharCode(31));
+          return key !== String.fromCharCode(31) ? key : `blank-row-${row.id}`;
+        }
+        const key = normalizeText(productText(row, sheet));
+        return key || `blank-row-${row.id}`;
+      }
+
+      function groupToken(key) {
+        return encodeURIComponent(key);
+      }
+
+      function groupKeyFromToken(token) {
+        try { return decodeURIComponent(token); }
+        catch (error) { return token; }
+      }
+
+      function buildGroups(sheet) {
+        if (sheet.groupCache && sheet.groupCache.has(state.duplicateMode)) return sheet.groupCache.get(state.duplicateMode);
+        const groups = new Map();
+        sheet.rows.forEach((row) => {
+          const key = duplicateKey(row, sheet);
+          if (!groups.has(key)) groups.set(key, { key, rows: [] });
+          groups.get(key).rows.push(row);
+        });
+        if (!sheet.groupCache) sheet.groupCache = new Map();
+        sheet.groupCache.set(state.duplicateMode, groups);
+        return groups;
+      }
+
+      function groupLabel(group, sheet) {
+        const row = group.rows[0];
+        let text;
+        if (state.duplicateMode === "location") {
+          text = groupingText(row, sheet).trim() || `${groupingFieldLabel(sheet)} not set`;
+        } else if (state.duplicateMode === "product-location") {
+          const product = productText(row, sheet).trim() || "Unlabelled record";
+          const groupingValue = groupingText(row, sheet).trim() || `${groupingFieldLabel(sheet)} not set`;
+          text = `${product} / ${groupingValue}`;
+        } else {
+          text = state.duplicateMode === "product" ? productText(row, sheet) : (sheet.productColumn !== null ? productText(row, sheet) : row.values.map(valueToString).filter((value) => value.trim()).join(" | "));
+        }
+        return text.trim() || "Unlabelled row";
+      }
+
+      function groupFieldValues(group, sheet) {
+        if (sheet.locationColumn === null) return "Choose a grouping field";
+        const values = Array.from(new Set(group.rows.map((row) => valueToString(row.values[sheet.locationColumn]).trim()).filter(Boolean)));
+        return values.length ? values.join(", ") : `${groupingFieldLabel(sheet)} not set`;
+      }
+
+      function groupQuantity(group, sheet, visibleOnly) {
+        if (sheet.quantityColumn === null) return "-";
+        const values = group.rows.filter((row) => !visibleOnly || !row.hidden).map((row) => parseNumber(row.values[sheet.quantityColumn])).filter((value) => value !== null);
+        return values.length ? formatNumber(values.reduce((total, value) => total + value, 0)) : "-";
+      }
+
+      function automationColumnIndex(rule, sheet) {
+        if (rule.column === "product") return sheet.productColumn;
+        if (rule.column === "location") return sheet.locationColumn;
+        if (rule.column === "sku") return findColumn(sheet.headers, [/^sku/i]);
+        if (rule.column === "any") return null;
+        if (rule.column && rule.column.startsWith("header:")) {
+          const fallbackIndex = Number(rule.column.slice(7));
+          const wantedHeader = normalizeText(rule.columnLabel);
+          const matchingIndex = sheet.headers.findIndex((header) => normalizeText(header) === wantedHeader);
+          if (matchingIndex >= 0) return matchingIndex;
+          return Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < sheet.width ? fallbackIndex : null;
+        }
+        return null;
+      }
+
+      function matchesAutomationRule(row, sheet, rule) {
+        const needle = normalizeText(rule.value);
+        if (!needle || row.blank) return false;
+        const columnIndex = automationColumnIndex(rule, sheet);
+        if (rule.column !== "any" && columnIndex === null) return false;
+        const values = rule.column === "any" ? row.values : [row.values[columnIndex]];
+        return values.some((value) => {
+          if (needle === emptyToken) return !valueToString(value).trim();
+          const text = normalizeText(value);
+          return rule.operator === "equals" ? text === needle : text.includes(needle);
+        });
+      }
+
+      function refreshRuleColumnOptions(selectedValue) {
+        const sheet = currentSheet();
+        const options = [
+          { value: "product", label: `${productFieldLabel(sheet)} (detected)`, disabled: Boolean(sheet && sheet.productColumn === null) },
+          { value: "location", label: `${groupingFieldLabel(sheet)} (selected)`, disabled: Boolean(sheet && sheet.locationColumn === null) },
+          { value: "sku", label: "SKU", disabled: Boolean(sheet && findColumn(sheet.headers, [/^sku/i]) < 0) },
+          { value: "any", label: "Any column" }
+        ];
+        if (sheet) sheet.headers.forEach((header, index) => options.push({ value: `header:${index}`, label: valueToString(header).trim() || `Column ${index + 1}` }));
+        refs.ruleColumnSelect.innerHTML = "";
+        options.forEach((option) => {
+          const element = new Option(option.label, option.value);
+          element.disabled = Boolean(option.disabled);
+          refs.ruleColumnSelect.add(element);
+        });
+        const selectedOption = options.find((option) => option.value === selectedValue);
+        refs.ruleColumnSelect.value = selectedOption && !selectedOption.disabled ? selectedValue : "product";
+      }
+
+      function automationRuleLabel(rule, sheet = currentSheet()) {
+        if (rule.column === "product") return `${productFieldLabel(sheet)} (detected)`;
+        if (rule.column === "location") return `${groupingFieldLabel(sheet)} (selected)`;
+        if (rule.column === "sku") return "SKU";
+        return rule.columnLabel || rule.column;
+      }
+
+      function renderAutomation() {
+        const enabledCount = state.automationRules.filter((rule) => rule.enabled).length;
+        refs.automationRuleCount.textContent = formatNumber(state.automationRules.length);
+        refs.automationSummary.textContent = state.automationRules.length
+          ? `${formatNumber(enabledCount)} of ${formatNumber(state.automationRules.length)} rule${state.automationRules.length === 1 ? "" : "s"} enabled. Rules run automatically when a file is imported.`
+          : "Create rules for the rows you remove every day.";
+        refs.runAutomationButton.disabled = !currentSheet() || state.loading;
+        if (!state.automationRules.length) {
+          refs.automationList.innerHTML = '<div class="automation-empty">No rules yet. Add a rule such as Record contains TEST to hide unwanted rows automatically.</div>';
+          return;
+        }
+        refs.automationList.innerHTML = state.automationRules.map((rule) => {
+          const operator = rule.operator === "equals" ? "equals" : "contains";
+          const lastRun = rule.lastRunAt ? `Last run: ${new Date(rule.lastRunAt).toLocaleString()} / ${formatNumber(rule.lastAffected)} rows affected` : "Not run yet";
+          return `<div class="automation-rule ${rule.enabled ? "" : "is-disabled"}">
+            <label class="rule-toggle" title="${rule.enabled ? "Disable rule" : "Enable rule"}"><input type="checkbox" data-rule-toggle="${escapeHTML(rule.id)}" ${rule.enabled ? "checked" : ""}></label>
+             <div class="automation-rule-copy"><strong>${escapeHTML(rule.name)}</strong><p><span>${escapeHTML(automationRuleLabel(rule))}</span> ${operator} <code>${escapeHTML(rule.value)}</code> <span>-> Hide row</span></p><span class="automation-rule-meta">${escapeHTML(lastRun)}</span></div>
+            <div class="automation-rule-actions"><button class="button button-quiet" type="button" data-automation-action="edit" data-rule-id="${escapeHTML(rule.id)}">Edit</button><button class="button button-danger" type="button" data-automation-action="delete" data-rule-id="${escapeHTML(rule.id)}">Delete</button></div>
+          </div>`;
+        }).join("");
+      }
+
+      function setAutomationPanel(open) {
+        state.automationPanelOpen = open;
+        refs.automationPanel.hidden = !open;
+        refs.automationButton.setAttribute("aria-expanded", String(open));
+        if (!open) {
+          state.editingRuleId = null;
+          refs.automationForm.hidden = true;
+        }
+        if (open) {
+          renderAutomation();
+          refreshRuleColumnOptions(refs.ruleColumnSelect.value || "product");
+          scrollAutomationPanelIntoView();
+        }
+      }
+
+      function startNewAutomationRule() {
+        setAutomationPanel(true);
+        state.editingRuleId = null;
+        refs.ruleFormTitle.textContent = "New automation rule";
+        refs.ruleNameInput.value = "";
+        refs.ruleOperatorSelect.value = "contains";
+        refs.ruleValueInput.value = "";
+        refreshRuleColumnOptions("product");
+        refs.automationForm.hidden = false;
+        refs.ruleNameInput.focus();
+        scrollAutomationPanelIntoView();
+      }
+
+      function editAutomationRule(id) {
+        const rule = state.automationRules.find((candidate) => candidate.id === id);
+        if (!rule) return;
+        setAutomationPanel(true);
+        state.editingRuleId = id;
+        refs.ruleFormTitle.textContent = "Edit automation rule";
+        refs.ruleNameInput.value = rule.name;
+        refs.ruleOperatorSelect.value = rule.operator;
+        refs.ruleValueInput.value = rule.value;
+        refreshRuleColumnOptions(rule.column);
+        refs.automationForm.hidden = false;
+        refs.ruleNameInput.focus();
+        scrollAutomationPanelIntoView();
+      }
+
+      function cancelAutomationRule() {
+        state.editingRuleId = null;
+        refs.automationForm.hidden = true;
+      }
+
+      function saveAutomationRule(event) {
+        event.preventDefault();
+        const name = refs.ruleNameInput.value.trim();
+        const value = refs.ruleValueInput.value.trim();
+        if (!name || !value) {
+          showToast("Add a rule name and a value before saving.", "error");
+          return;
+        }
+        const column = refs.ruleColumnSelect.value || "product";
+        const selectedOption = refs.ruleColumnSelect.options[refs.ruleColumnSelect.selectedIndex];
+        const nextRule = {
+          name, column, columnLabel: selectedOption ? selectedOption.textContent : column,
+          operator: refs.ruleOperatorSelect.value === "equals" ? "equals" : "contains", value
+        };
+        const existing = state.automationRules.find((rule) => rule.id === state.editingRuleId);
+        if (existing) {
+          Object.assign(existing, nextRule);
+          existing.lastAffected = 0;
+          existing.lastRunAt = "";
+        }
+        else state.automationRules.push({ id: `rule-${Date.now()}-${Math.random().toString(36).slice(2)}`, ...nextRule, enabled: true, lastAffected: 0, lastRunAt: "" });
+        saveAutomationRules();
+        cancelAutomationRule();
+        renderAutomation();
+        showToast(existing ? "Automation rule updated." : "Automation rule created.", "success");
+      }
+
+      function deleteAutomationRule(id) {
+        const rule = state.automationRules.find((candidate) => candidate.id === id);
+        if (!rule) return;
+        if (!window.confirm(`Delete the rule "${rule.name}"?`)) return;
+        state.automationRules = state.automationRules.filter((candidate) => candidate.id !== id);
+        saveAutomationRules();
+        renderAutomation();
+        showToast("Automation rule deleted.", "success");
+      }
+
+      function runAutomation(options = {}) {
+        const enabledRules = state.automationRules.filter((rule) => rule.enabled && normalizeText(rule.value));
+        if (!enabledRules.length) return { hiddenCount: 0, enabledCount: 0, changed: false };
+        const before = captureVisibility();
+        let hiddenCount = 0;
+        const runAt = new Date().toISOString();
+        enabledRules.forEach((rule) => {
+          let affected = 0;
+          state.sheetStates.forEach((sheet) => sheet.rows.forEach((row) => {
+            if (!matchesAutomationRule(row, sheet, rule)) return;
+            affected += 1;
+            if (!row.hidden) { row.hidden = true; hiddenCount += 1; }
+          }));
+          rule.lastAffected = affected;
+          rule.lastRunAt = runAt;
+        });
+        saveAutomationRules();
+        const changed = commitVisibilityHistory("Automation rules", before);
+        if (changed) state.selectedIds.clear();
+        if (options.announce !== false) {
+          refresh();
+          showToast(hiddenCount ? `Automation complete: ${formatNumber(hiddenCount)} rows automatically hidden.` : "Automation complete: no new rows were hidden.", hiddenCount ? "success" : "");
+        }
+        return { hiddenCount, enabledCount: enabledRules.length, changed };
+      }
+
+      function matchesSearch(row) {
+        const query = state.searchNormalized || normalizeText(state.search);
+        if (query === emptyToken) return (row.emptyColumns || row.values.map((value) => !valueToString(value).trim())).some(Boolean);
+        return !query || (row.searchText || row.values.map(normalizeText).join(" ")).includes(query) || String(row.sourceRowNumber).includes(query);
+      }
+
+      function matchesScope(row, group) {
+        if (state.scope === "active") return !row.hidden || state.includeHidden;
+        if (state.scope === "hidden") return row.hidden;
+        if (state.scope === "duplicates") return group.rows.length > 1 && (!row.hidden || state.includeHidden);
+        return true;
+      }
+
+      function compareRows(first, second, sheet) {
+        if (state.sort === "product") {
+          const productCompare = normalizeText(productText(first, sheet)).localeCompare(normalizeText(productText(second, sheet)), undefined, { numeric: true });
+          if (productCompare) return productCompare;
+        }
+        if (state.sort === "quantity") {
+          const firstValue = parseNumber(sheet.quantityColumn === null ? "" : first.values[sheet.quantityColumn]);
+          const secondValue = parseNumber(sheet.quantityColumn === null ? "" : second.values[sheet.quantityColumn]);
+          const difference = (secondValue === null ? -Infinity : secondValue) - (firstValue === null ? -Infinity : firstValue);
+          if (difference) return difference;
+        }
+        return first.sourceIndex - second.sourceIndex;
+      }
+
+      function displayRows(sheet, groups) {
+        return sheet.rows.filter((row) => matchesScope(row, groups.get(duplicateKey(row, sheet))) && matchesSearch(row)).sort((a, b) => compareRows(a, b, sheet));
+      }
+
+      function displayGroups(sheet, groups) {
+        const result = Array.from(groups.values()).filter((group) => group.rows.some((row) => matchesScope(row, group) && matchesSearch(row)));
+        return result.sort((first, second) => {
+          if (state.sort === "quantity") {
+            const difference = Number(groupQuantity(second, sheet, false).replace(/,/g, "")) - Number(groupQuantity(first, sheet, false).replace(/,/g, ""));
+            if (Number.isFinite(difference) && difference) return difference;
+          }
+          if (state.sort === "product") return groupLabel(first, sheet).localeCompare(groupLabel(second, sheet), undefined, { numeric: true, sensitivity: "base" });
+          return first.rows[0].sourceIndex - second.rows[0].sourceIndex;
+        });
+      }
+
+      function selectedRowsForView() {
+        const sheet = currentSheet();
+        if (!sheet) return [];
+        const groups = buildGroups(sheet);
+        if (state.view === "groups") return displayGroups(sheet, groups).flatMap((group) => group.rows);
+        return displayRows(sheet, groups);
+      }
+
+      function resetPage() {
+        state.page = 1;
+      }
+
+      function updatePageControls(total) {
+        const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
+        state.page = Math.min(state.page, pageCount);
+        refs.pageControls.hidden = total <= state.pageSize;
+        refs.pageStatus.textContent = `Page ${state.page} of ${pageCount}`;
+        refs.previousPageButton.disabled = state.page <= 1;
+        refs.nextPageButton.disabled = state.page >= pageCount;
+      }
+
+      function pageItems(items) {
+        const start = (state.page - 1) * state.pageSize;
+        return items.slice(start, start + state.pageSize);
+      }
+
+      function rowById(id) {
+        const sheet = currentSheet();
+        return sheet ? sheet.rows.find((row) => row.id === id) : null;
+      }
+
+      function showToast(message, type) {
+        clearTimeout(state.toastTimer);
+        refs.toast.textContent = message;
+        refs.toast.className = `toast is-visible${type ? ` ${type}` : ""}`;
+        state.toastTimer = setTimeout(() => refs.toast.classList.remove("is-visible"), 3200);
+      }
+
+      function captureVisibility() {
+        const snapshot = new Map();
+        state.sheetStates.forEach((sheet, name) => snapshot.set(name, sheet.rows.map((row) => Boolean(row.hidden))));
+        return snapshot;
+      }
+
+      function sameVisibility(first, second) {
+        if (first.size !== second.size) return false;
+        for (const [name, values] of first) {
+          const other = second.get(name);
+          if (!other || values.length !== other.length || values.some((value, index) => value !== other[index])) return false;
+        }
+        return true;
+      }
+
+      function restoreVisibility(snapshot) {
+        snapshot.forEach((values, name) => {
+          const sheet = state.sheetStates.get(name);
+          if (!sheet) return;
+          sheet.rows.forEach((row, index) => { row.hidden = Boolean(values[index]); });
+        });
+      }
+
+      function commitVisibilityHistory(label, before) {
+        const after = captureVisibility();
+        if (sameVisibility(before, after)) return false;
+        state.history = state.history.slice(0, state.historyIndex + 1);
+        state.history.push({ label, before, after });
+        if (state.history.length > 50) state.history.shift();
+        state.historyIndex = state.history.length - 1;
+        return true;
+      }
+
+      function resetHistory() {
+        state.history = [];
+        state.historyIndex = -1;
+      }
+
+      function undo() {
+        if (state.historyIndex < 0) {
+          showToast("There is nothing to undo.");
+          return;
+        }
+        const entry = state.history[state.historyIndex];
+        restoreVisibility(entry.before);
+        state.historyIndex -= 1;
+        state.selectedIds.clear();
+        state.selectedCell = null;
+        refresh();
+        showToast(`Undid ${entry.label}.`, "success");
+      }
+
+      function redo() {
+        if (state.historyIndex >= state.history.length - 1) {
+          showToast("There is nothing to redo.");
+          return;
+        }
+        const entry = state.history[state.historyIndex + 1];
+        restoreVisibility(entry.after);
+        state.historyIndex += 1;
+        state.selectedIds.clear();
+        state.selectedCell = null;
+        refresh();
+        showToast(`Redid ${entry.label}.`, "success");
+      }
+
+      function setEngineStatus() {
+        const ready = hasEngine();
+        refs.engineStatus.textContent = ready ? "Spreadsheet engine ready" : "XLSX engine unavailable; CSV still works";
+        refs.engineDot.classList.toggle("offline", !ready);
+      }
+
+      function updateStats() {
+        const sheet = currentSheet();
+        if (!sheet) {
+          refs.visibleStat.textContent = "0"; refs.hiddenStat.textContent = "0"; refs.duplicateStat.textContent = "0"; refs.quantityStat.textContent = "-";
+          refs.visibleStatFoot.textContent = "Nothing imported yet"; refs.hiddenStatFoot.textContent = "Ready to clean"; refs.duplicateStatFoot.textContent = "Same record values"; refs.quantityStatFoot.textContent = "No numeric value selected";
+          return;
+        }
+        const groups = buildGroups(sheet);
+        const visible = sheet.rows.filter((row) => !row.hidden);
+        const hidden = sheet.rows.length - visible.length;
+        const duplicateGroups = Array.from(groups.values()).filter((group) => group.rows.length > 1).length;
+        refs.visibleStat.textContent = formatNumber(visible.length);
+        refs.hiddenStat.textContent = formatNumber(hidden);
+        refs.duplicateStat.textContent = formatNumber(duplicateGroups);
+         refs.visibleStatFoot.textContent = `${formatNumber(sheet.rows.length)} total sheet rows`;
+        refs.hiddenStatFoot.textContent = hidden ? "Excluded from the next export" : "Nothing hidden yet";
+        refs.duplicateStatFoot.textContent = `Grouped by ${groupingLabel(sheet)}`;
+        if (sheet.quantityColumn === null) {
+          refs.quantityStat.textContent = "-";
+           refs.quantityStatFoot.textContent = "No numeric value column found";
+        } else {
+          const total = visible.map((row) => parseNumber(row.values[sheet.quantityColumn])).filter((value) => value !== null).reduce((sum, value) => sum + value, 0);
+          refs.quantityStat.textContent = formatNumber(total);
+           refs.quantityStatFoot.textContent = `Visible ${valueFieldLabel(sheet)} total`;
+        }
+      }
+
+      function updateControls() {
+        const sheet = currentSheet();
+        const loaded = Boolean(sheet);
+        refs.fileCard.hidden = !state.fileName;
+        refs.fileName.textContent = state.fileName || "No file loaded";
+         refs.fileMeta.textContent = loaded ? `${formatNumber(sheet.rows.length)} rows / ${formatNumber(sheet.width)} columns` : "Ready for a spreadsheet";
+        refs.sheetSelect.disabled = !state.sheetStates.size || state.loading;
+        refs.sheetSelect.innerHTML = "";
+        if (!state.sheetStates.size) {
+          refs.sheetSelect.add(new Option("Import a file first", ""));
+        } else {
+          state.sheetStates.forEach((value, name) => refs.sheetSelect.add(new Option(name, name)));
+          refs.sheetSelect.value = state.currentSheet;
+        }
+        refreshGroupingFieldOptions();
+        refs.searchInput.disabled = !loaded || state.loading;
+        refs.includeHidden.disabled = !loaded || state.loading;
+        refs.scopeSelect.disabled = !loaded || state.loading;
+        refs.duplicateMode.disabled = !loaded || state.loading;
+        refs.sortSelect.disabled = !loaded || state.loading;
+        const hasGroupingField = loaded && sheet.locationColumn !== null;
+         updateGroupingModeOptions(sheet);
+         updateSortOptions(sheet);
+        Array.from(refs.duplicateMode.options).forEach((option) => {
+          option.disabled = !hasGroupingField && ["location", "product-location"].includes(option.value);
+        });
+         if (!hasGroupingField && ["location", "product-location"].includes(state.duplicateMode)) state.duplicateMode = "product";
+         if (sheet && sheet.quantityColumn === null && state.sort === "quantity") state.sort = "original";
+        refs.hideZeroButton.textContent = loaded && sheet.quantityColumn !== null ? `Hide zero ${valueFieldLabel(sheet)}` : "Hide zero values";
+        refs.hideZeroButton.disabled = !loaded || state.loading || sheet.quantityColumn === null;
+        refs.restoreAllButton.disabled = !loaded || state.loading || !sheet.rows.some((row) => row.hidden);
+        refs.exportCsvButton.disabled = !loaded || state.loading;
+        refs.exportXlsxButton.disabled = !loaded || state.loading || !hasEngine();
+        refs.clearButton.disabled = !loaded || state.loading;
+        refs.undoButton.disabled = state.loading || state.historyIndex < 0;
+        refs.redoButton.disabled = state.loading || state.historyIndex >= state.history.length - 1;
+        refs.searchInput.value = state.search;
+        refs.includeHidden.checked = state.includeHidden;
+        refs.scopeSelect.value = state.scope;
+        refs.duplicateMode.value = state.duplicateMode;
+        refs.sortSelect.value = state.sort;
+        refs.viewTabs.forEach((button) => { button.setAttribute("aria-pressed", String(button.dataset.view === state.view)); });
+        refs.workspaceDot.classList.toggle("offline", !loaded);
+        refs.dropZone.classList.toggle("is-loading", state.loading);
+         refs.searchInput.placeholder = loaded ? `Search ${productFieldLabel(sheet)}, ${groupingFieldLabel(sheet)}, or any cell...` : "Search record, grouping field, or any cell...";
+         refs.topStatus.textContent = state.loading ? `Reading ${state.loadingFileName || state.fileName || "your spreadsheet"}...` : (loaded ? `${state.fileName} / ${formatNumber(sheet.rows.length)} rows` : "Waiting for a spreadsheet");
+        refs.tableTitle.textContent = loaded ? `${sheet.name} rows` : "Spreadsheet rows";
+        refs.tableSubtitle.textContent = loaded ? `${formatNumber(sheet.width)} columns detected. Hide rows here, then export the clean result.` : "Import your spreadsheet to begin.";
+        if (!loaded) {
+          refs.quickCopy.innerHTML = "<strong>Nothing to organize yet.</strong>";
+        } else {
+          const duplicateCount = Array.from(buildGroups(sheet).values()).filter((group) => group.rows.length > 1).length;
+          refs.quickCopy.innerHTML = `<strong>${formatNumber(duplicateCount)} groups</strong> found by ${escapeHTML(groupingLabel(sheet))}.`;
+        }
+      }
+
+      function selectAllState(rows) {
+        const selected = rows.filter((row) => state.selectedIds.has(row.id)).length;
+        return { all: rows.length > 0 && selected === rows.length, some: selected > 0 && selected < rows.length };
+      }
+
+      function rawTable(sheet, groups, rows, selectableRows = rows) {
+        const stateOfSelectAll = selectAllState(selectableRows);
+        refs.tableHead.innerHTML = `<tr><th class="row-number">#</th><th class="check-head"><input type="checkbox" aria-label="Select shown rows" data-all-select ${stateOfSelectAll.all ? "checked" : ""}></th>${sheet.headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}<th>Match</th><th class="action-cell">Actions</th></tr>`;
+        refs.tableBody.innerHTML = rows.map((row) => {
+          const group = groups.get(duplicateKey(row, sheet));
+          const count = group.rows.length;
+          const hiddenCount = group.rows.filter((groupRow) => groupRow.hidden).length;
+          const visibleCount = count - hiddenCount;
+          const selectedCellRow = state.selectedCell && state.selectedCell.rowId === row.id;
+          const match = count > 1 ? `<span class="match-badge">${count} matches</span>` : '<span class="muted-badge">Unique</span>';
+          const hiddenBadge = row.hidden ? '<span class="hidden-badge">excluded</span>' : "";
+          const groupAction = count > 1 ? `<button class="row-action group-action ${visibleCount ? "" : "restore"}" type="button" data-action="toggle-group-hidden" data-group-key="${escapeHTML(groupToken(group.key))}" title="${visibleCount ? "Hide all matching rows" : "Restore all matching rows"}">${visibleCount ? "Hide group" : "Restore group"}</button>` : "";
+          return `<tr class="${row.hidden ? "is-hidden" : ""}">
+            <td class="row-number-cell">${row.sourceRowNumber}</td>
+            <td class="check-cell"><input type="checkbox" aria-label="Select row ${row.sourceRowNumber}" data-row-select="${escapeHTML(row.id)}" ${state.selectedIds.has(row.id) ? "checked" : ""}></td>
+            ${row.values.map((value, index) => `<td data-cell-row="${escapeHTML(row.id)}" data-cell-column="${index}" class="${selectedCellRow && state.selectedCell.columnIndex === index ? "cell-selected" : ""}" title="Click to select this cell">${formatCell(value)}</td>`).join("")}
+            <td>${match}${hiddenBadge}</td>
+            <td class="action-cell"><button class="row-action ${row.hidden ? "restore" : ""}" type="button" data-action="toggle-row" data-row-id="${escapeHTML(row.id)}" title="${row.hidden ? "Restore this row" : "Hide this row"}">${row.hidden ? "Restore" : "Hide"}</button>${groupAction}</td>
+          </tr>`;
+        }).join("");
+        const selectAll = refs.tableHead.querySelector("[data-all-select]");
+        if (selectAll) selectAll.indeterminate = stateOfSelectAll.some;
+      }
+
+      function groupDetails(group, sheet) {
+        return `<div class="group-details">
+          <div class="details-heading"><span>Original rows in this group</span><span>${group.rows.length} row${group.rows.length === 1 ? "" : "s"}</span></div>
+          <div class="table-scroll"><table class="mini-table"><thead><tr><th>#</th>${sheet.headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}<th class="action-cell">Action</th></tr></thead><tbody>
+            ${group.rows.map((row) => `<tr class="${row.hidden ? "is-hidden" : ""}"><td class="row-number-cell">${row.sourceRowNumber}</td>${row.values.map((value, index) => `<td data-cell-row="${escapeHTML(row.id)}" data-cell-column="${index}" class="${state.selectedCell && state.selectedCell.rowId === row.id && state.selectedCell.columnIndex === index ? "cell-selected" : ""}" title="Click to select this cell">${formatCell(value)}</td>`).join("")}<td class="action-cell"><button class="row-action ${row.hidden ? "restore" : ""}" type="button" data-action="toggle-row" data-row-id="${escapeHTML(row.id)}">${row.hidden ? "Restore" : "Hide"}</button></td></tr>`).join("")}
+          </tbody></table></div>
+        </div>`;
+      }
+
+      function groupedTable(sheet, groups, visibleGroups, selectableRows) {
+        const selectState = selectAllState(selectableRows);
+        refs.tableHead.innerHTML = `<tr><th class="row-number">#</th><th class="check-head"><input type="checkbox" aria-label="Select shown groups" data-all-select ${selectState.all ? "checked" : ""}></th><th>${escapeHTML(productFieldLabel(sheet))} group</th><th>Matches</th><th>${escapeHTML(groupingFieldLabel(sheet))}</th><th>Visible ${escapeHTML(valueFieldLabel(sheet))}</th><th>Original rows</th><th class="action-cell">Action</th></tr>`;
+        refs.tableBody.innerHTML = visibleGroups.map((group) => {
+          const expanded = state.expandedGroups.has(group.key);
+          const hiddenCount = group.rows.filter((row) => row.hidden).length;
+          const visibleCount = group.rows.length - hiddenCount;
+          const groupSelected = selectAllState(group.rows);
+           const countLabel = group.rows.length > 1 ? `${group.rows.length} matches` : "1 row";
+          const lines = group.rows.map((row) => `#${row.sourceRowNumber}`).join(", ");
+          return `<tr class="group-row ${visibleCount ? "" : "group-fully-hidden"}">
+            <td class="row-number-cell"><button class="expand-button" type="button" aria-label="Toggle group details" aria-expanded="${expanded}" data-action="toggle-group" data-group-key="${groupToken(group.key)}">></button></td>
+            <td class="check-cell"><input type="checkbox" aria-label="Select ${escapeHTML(groupLabel(group, sheet))}" data-group-select="${groupToken(group.key)}" ${groupSelected.all ? "checked" : ""}></td>
+            <td><div class="group-product"><strong title="${escapeHTML(groupLabel(group, sheet))}">${escapeHTML(groupLabel(group, sheet))}</strong><span class="group-count ${group.rows.length === 1 ? "unique" : ""}">${countLabel}</span></div></td>
+            <td><span class="group-meta">${group.rows.length}</span></td>
+            <td><span class="group-meta">${escapeHTML(groupFieldValues(group, sheet))}</span></td>
+            <td><span class="group-meta">${groupQuantity(group, sheet, true)}</span>${hiddenCount ? `<span class="hidden-badge">${hiddenCount} hidden</span>` : ""}</td>
+            <td><span class="group-lines">${escapeHTML(lines)}</span></td>
+            <td class="action-cell"><button class="row-action ${visibleCount ? "" : "restore"}" type="button" data-action="toggle-group-hidden" data-group-key="${groupToken(group.key)}">${visibleCount ? "Hide group" : "Restore"}</button></td>
+          </tr>${expanded ? `<tr class="details-row"><td colspan="8">${groupDetails(group, sheet)}</td></tr>` : ""}`;
+        }).join("");
+        const selectAll = refs.tableHead.querySelector("[data-all-select]");
+        if (selectAll) selectAll.indeterminate = selectState.some;
+        refs.tableBody.querySelectorAll("[data-group-select]").forEach((input) => {
+          const group = groups.get(groupKeyFromToken(input.dataset.groupSelect));
+          if (!group) return;
+          const selected = selectAllState(group.rows);
+          input.indeterminate = selected.some;
+        });
+      }
+
+      function renderTable() {
+        const sheet = currentSheet();
+        if (!sheet) {
+          refs.tableScroll.hidden = true;
+          refs.emptyState.hidden = false;
+            refs.emptyTitle.textContent = state.loading ? "Reading your spreadsheet..." : "Bring in your spreadsheet";
+            refs.emptyCopy.textContent = state.loading ? "The organizer is detecting headers and preparing the working table." : "Drop an XLSX or CSV file into the panel on the left. The organizer will detect useful fields automatically, and you can choose any column as the grouping field.";
+          refs.resultCount.textContent = "No rows loaded";
+          updatePageControls(0);
+          refs.exportHint.innerHTML = "<strong>Tip:</strong> hide rows first, then export the visible data.";
+          return;
+        }
+        const groups = buildGroups(sheet);
+        const items = state.view === "rows" ? displayRows(sheet, groups) : displayGroups(sheet, groups);
+        const selectableRows = state.view === "rows" ? items : items.flatMap((group) => group.rows);
+        updatePageControls(items.length);
+        const visibleItems = pageItems(items);
+        refs.tableScroll.hidden = items.length === 0;
+        refs.emptyState.hidden = items.length !== 0;
+        if (state.view === "rows") rawTable(sheet, groups, visibleItems, selectableRows);
+        else groupedTable(sheet, groups, visibleItems, selectableRows);
+        if (!items.length) {
+          refs.emptyTitle.textContent = state.scope === "hidden" ? "No hidden rows" : (state.search ? "No rows match that search" : "Nothing in this view");
+          refs.emptyCopy.textContent = state.scope === "hidden" ? "Rows you hide will appear here so you can restore them before exporting." : "Try a different filter, clear the search, or import another sheet.";
+        }
+        const unit = state.view === "rows" ? "row" : "group";
+        refs.resultCount.textContent = `${formatNumber(items.length)} ${unit}${items.length === 1 ? "" : "s"} shown`;
+        refs.exportHint.innerHTML = `<strong>${formatNumber(sheet.rows.filter((row) => !row.hidden).length)} rows will export.</strong> Search and sorting do not change the export.`;
+      }
+
+      function renderSelection() {
+        const count = state.selectedIds.size;
+        refs.selectionBar.hidden = count === 0;
+        refs.selectionCount.textContent = `${formatNumber(count)} selected`;
+      }
+
+      function refresh() {
+        setEngineStatus();
+        updateControls();
+        updateStats();
+        renderTable();
+        renderSelection();
+        renderAutomation();
+      }
+
+      function exportRows(sheet) {
+        return [...sheet.prefixRows, sheet.headerValues, ...sheet.rows.filter((row) => !row.hidden).map((row) => row.values.slice())];
+      }
+
+      function exportBaseName() {
+        const base = state.fileName.replace(/\.[^.]+$/, "").replace(/[<>:"/\\|?*]+/g, "-").trim();
+        return `${base || "spreadsheet"}-organized`;
+      }
+
+      function csvValue(value) {
+        const text = valueToString(value);
+        return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+      }
+
+      function downloadText(text, fileName, type) {
+        const blob = new Blob([text], { type });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => { URL.revokeObjectURL(link.href); link.remove(); }, 0);
+      }
+
+      function exportCsv() {
+        const sheet = currentSheet();
+        if (!sheet) return;
+        const csv = exportRows(sheet).map((row) => row.map(csvValue).join(",")).join("\r\n");
+        downloadText(String.fromCharCode(0xFEFF) + csv, `${exportBaseName()}.csv`, "text/csv;charset=utf-8");
+        showToast(`${formatNumber(sheet.rows.filter((row) => !row.hidden).length)} rows exported as CSV.`, "success");
+      }
+
+      function exportXlsx() {
+        const sheet = currentSheet();
+        if (!sheet) return;
+        if (!hasEngine()) {
+          showToast("The XLSX engine is unavailable. Use CSV or reconnect to the internet and reload this page.", "error");
+          return;
+        }
+        try {
+          const outputBook = window.XLSX.utils.book_new();
+          state.sheetStates.forEach((sheetState) => {
+            const outputSheet = window.XLSX.utils.aoa_to_sheet(exportRows(sheetState));
+            if (sheetState.sourceSheet && sheetState.sourceSheet["!cols"]) outputSheet["!cols"] = sheetState.sourceSheet["!cols"].map((column) => ({ ...column }));
+            window.XLSX.utils.book_append_sheet(outputBook, outputSheet, sheetState.name);
+          });
+          window.XLSX.writeFile(outputBook, `${exportBaseName()}.xlsx`, { bookType: "xlsx", compression: true });
+          showToast("XLSX exported with hidden rows removed.", "success");
+        } catch (error) {
+          console.error(error);
+          showToast("The workbook could not be exported. Try exporting CSV instead.", "error");
+        }
+      }
+
+      function toggleRow(id) {
+        const row = rowById(id);
+        if (!row) return;
+        const before = captureVisibility();
+        row.hidden = !row.hidden;
+        state.selectedIds.delete(id);
+        commitVisibilityHistory(row.hidden ? "Hide row" : "Restore row", before);
+        refresh();
+      }
+
+      function toggleGroupHidden(key) {
+        const sheet = currentSheet();
+        if (!sheet) return;
+        const group = buildGroups(sheet).get(key);
+        if (!group) return;
+        const before = captureVisibility();
+        const shouldHide = group.rows.some((row) => !row.hidden);
+        group.rows.forEach((row) => { row.hidden = shouldHide; state.selectedIds.delete(row.id); });
+        commitVisibilityHistory(shouldHide ? "Hide group" : "Restore group", before);
+        refresh();
+        showToast(shouldHide ? `${group.rows.length} matching row${group.rows.length === 1 ? "" : "s"} hidden.` : "Group restored.", shouldHide ? "" : "success");
+      }
+
+      function toggleGroupExpanded(key) {
+        if (state.expandedGroups.has(key)) state.expandedGroups.delete(key);
+        else state.expandedGroups.add(key);
+        renderTable();
+      }
+
+      function applyToSelected(hidden) {
+        const sheet = currentSheet();
+        if (!sheet || !state.selectedIds.size) return;
+        const before = captureVisibility();
+        const rows = sheet.rows.filter((row) => state.selectedIds.has(row.id));
+        rows.forEach((row) => { row.hidden = hidden; });
+        state.selectedIds.clear();
+        commitVisibilityHistory(hidden ? "Hide selected rows" : "Restore selected rows", before);
+        refresh();
+        showToast(`${rows.length} row${rows.length === 1 ? "" : "s"} ${hidden ? "hidden" : "restored"}.`, hidden ? "" : "success");
+      }
+
+      function hideZeroQuantity() {
+        const sheet = currentSheet();
+        if (!sheet || sheet.quantityColumn === null) return;
+        const before = captureVisibility();
+        let count = 0;
+        sheet.rows.forEach((row) => {
+          if (!row.hidden && parseNumber(row.values[sheet.quantityColumn]) === 0) { row.hidden = true; count += 1; }
+        });
+        commitVisibilityHistory("Hide zero-value rows", before);
+        refresh();
+        showToast(count ? `${count} zero-value row${count === 1 ? "" : "s"} hidden.` : "No visible zero-value rows found.");
+      }
+
+      function restoreAll() {
+        const sheet = currentSheet();
+        if (!sheet) return;
+        const before = captureVisibility();
+        const count = sheet.rows.filter((row) => row.hidden).length;
+        sheet.rows.forEach((row) => { row.hidden = false; });
+        state.selectedIds.clear();
+        commitVisibilityHistory("Restore all rows", before);
+        refresh();
+        showToast(count ? `${count} row${count === 1 ? "" : "s"} restored.` : "Everything is already visible.", "success");
+      }
+
+      function clearWorkspace() {
+        state.fileName = "";
+        state.sourceType = "";
+        state.workbook = null;
+        state.sheetStates = new Map();
+        state.currentSheet = "";
+        state.loading = false;
+        state.loadingFileName = "";
+        state.search = "";
+        state.searchNormalized = "";
+        state.includeHidden = false;
+        state.scope = "active";
+        state.sort = "original";
+        state.view = "rows";
+        state.expandedGroups.clear();
+        state.selectedIds.clear();
+        state.selectedCell = null;
+        resetPage();
+        resetHistory();
+        refs.fileInput.value = "";
+        refresh();
+      }
+
+      async function importFile(file) {
+        if (!file) return;
+        const extension = file.name.split(".").pop().toLocaleLowerCase();
+        state.loading = true;
+        state.loadingFileName = file.name;
+        refresh();
+        try {
+          if (!["xlsx", "xls", "csv", "tsv"].includes(extension)) throw new Error("Please choose an XLSX, XLS, CSV, or TSV file.");
+          let workbook = null;
+          const sheets = new Map();
+          if (extension === "csv" || extension === "tsv") {
+            let text = await file.text();
+            if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+            const rows = parseDelimited(text, extension === "tsv" ? "\t" : detectDelimiter(text));
+            sheets.set("Sheet1", buildSheetState("Sheet1", null, rows));
+            state.sourceType = extension;
+          } else {
+            if (!hasEngine()) throw new Error("The XLSX engine is unavailable. Reload this page while connected to the internet, or use CSV.");
+            workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, raw: true });
+            if (!workbook.SheetNames.length) throw new Error("No worksheets were found in that file.");
+            workbook.SheetNames.forEach((name) => sheets.set(name, buildSheetState(name, workbook.Sheets[name], null)));
+            state.sourceType = extension || "xlsx";
+          }
+          state.fileName = file.name;
+          state.workbook = workbook;
+          state.sheetStates = sheets;
+          state.currentSheet = sheets.keys().next().value;
+          state.search = "";
+          state.searchNormalized = "";
+          state.includeHidden = false;
+          state.scope = "active";
+          state.sort = "original";
+          state.view = "rows";
+          state.expandedGroups.clear();
+          state.selectedIds.clear();
+          state.selectedCell = null;
+          resetPage();
+          resetHistory();
+          const automationResult = runAutomation({ announce: false });
+          refresh();
+          const sheet = currentSheet();
+          const automationMessage = automationResult.enabledCount ? ` Automation complete: ${formatNumber(automationResult.hiddenCount)} rows automatically hidden.` : "";
+          showToast(`${file.name} loaded: ${formatNumber(sheet.rows.length)} data rows ready.${automationMessage}`, "success");
+        } catch (error) {
+          console.error(error);
+          showToast(error.message || "That file could not be imported.", "error");
+        } finally {
+          state.loading = false;
+          state.loadingFileName = "";
+          refs.fileInput.value = "";
+          refresh();
+        }
+      }
+
+      function handleTableClick(event) {
+        const cell = event.target.closest("[data-cell-row]");
+        if (cell && !event.target.closest("button, input")) {
+          state.selectedCell = { rowId: cell.dataset.cellRow, columnIndex: Number(cell.dataset.cellColumn) };
+          renderTable();
+          return;
+        }
+        const action = event.target.closest("[data-action]");
+        if (!action) return;
+        if (action.dataset.action === "toggle-row") toggleRow(action.dataset.rowId);
+        if (action.dataset.action === "toggle-group") toggleGroupExpanded(groupKeyFromToken(action.dataset.groupKey));
+        if (action.dataset.action === "toggle-group-hidden") toggleGroupHidden(groupKeyFromToken(action.dataset.groupKey));
+      }
+
+      function handleTableChange(event) {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement)) return;
+        if (input.matches("[data-row-select]")) {
+          if (input.checked) state.selectedIds.add(input.dataset.rowSelect);
+          else state.selectedIds.delete(input.dataset.rowSelect);
+          refresh();
+          return;
+        }
+        const sheet = currentSheet();
+        if (!sheet) return;
+        const groups = buildGroups(sheet);
+        if (input.matches("[data-group-select]")) {
+          const group = groups.get(groupKeyFromToken(input.dataset.groupSelect));
+          if (group) group.rows.forEach((row) => input.checked ? state.selectedIds.add(row.id) : state.selectedIds.delete(row.id));
+          refresh();
+          return;
+        }
+        if (input.matches("[data-all-select]")) {
+          selectedRowsForView().forEach((row) => input.checked ? state.selectedIds.add(row.id) : state.selectedIds.delete(row.id));
+          refresh();
+        }
+      }
+
+      function handleAutomationClick(event) {
+        const action = event.target.closest("[data-automation-action]");
+        if (!action) return;
+        const id = action.dataset.ruleId;
+        if (action.dataset.automationAction === "edit") editAutomationRule(id);
+        if (action.dataset.automationAction === "delete") deleteAutomationRule(id);
+      }
+
+      function handleAutomationChange(event) {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || !input.matches("[data-rule-toggle]")) return;
+        const rule = state.automationRules.find((candidate) => candidate.id === input.dataset.ruleToggle);
+        if (!rule) return;
+        rule.enabled = input.checked;
+        saveAutomationRules();
+        renderAutomation();
+        showToast(`Rule ${rule.enabled ? "enabled" : "disabled"}.`, "success");
+      }
+
+      function scrollAutomationPanelIntoView() {
+        if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+        window.requestAnimationFrame(() => {
+          refs.automationPanel.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "start"
+          });
+        });
+      }
+
+      function copySelectedCell() {
+        if (!state.selectedCell) return false;
+        const sheet = currentSheet();
+        const row = rowById(state.selectedCell.rowId);
+        if (!sheet || !row) return false;
+        const value = valueToString(row.values[state.selectedCell.columnIndex]);
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+          showToast("Cell selected. Clipboard access is unavailable in this browser.");
+          return true;
+        }
+        navigator.clipboard.writeText(value).then(() => showToast("Cell copied.", "success")).catch(() => showToast("The cell could not be copied.", "error"));
+        return true;
+      }
+
+      function handleKeyboardShortcuts(event) {
+        const key = event.key.toLowerCase();
+        const modifier = event.ctrlKey || event.metaKey;
+        const targetTag = event.target && event.target.tagName;
+        const isEditing = ["INPUT", "TEXTAREA", "SELECT"].includes(targetTag) || Boolean(event.target && event.target.isContentEditable);
+        if (event.key === "Escape") {
+          if (!refs.automationForm.hidden) cancelAutomationRule();
+          else if (state.automationPanelOpen) setAutomationPanel(false);
+          return;
+        }
+        if (modifier && key === "enter" && !refs.automationForm.hidden) {
+          event.preventDefault();
+          refs.automationForm.requestSubmit();
+          return;
+        }
+        if (modifier && !isEditing && key === "z") {
+          event.preventDefault();
+          if (event.shiftKey) redo();
+          else undo();
+          return;
+        }
+        if (modifier && !isEditing && (key === "y" || (key === "z" && event.shiftKey))) {
+          event.preventDefault();
+          redo();
+          return;
+        }
+        if (modifier && !isEditing && key === "c" && copySelectedCell()) {
+          event.preventDefault();
+          return;
+        }
+        if (!modifier && !isEditing && event.key === "/" && currentSheet()) {
+          event.preventDefault();
+          refs.searchInput.focus();
+        }
+      }
+
+      refs.fileInput.addEventListener("change", (event) => importFile(event.target.files[0]));
+      refs.dropZone.addEventListener("dragover", (event) => { event.preventDefault(); refs.dropZone.classList.add("is-dragging"); });
+      refs.dropZone.addEventListener("dragleave", () => refs.dropZone.classList.remove("is-dragging"));
+      refs.dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        refs.dropZone.classList.remove("is-dragging");
+        importFile(event.dataTransfer.files[0]);
+      });
+      refs.sheetSelect.addEventListener("change", () => {
+        state.currentSheet = refs.sheetSelect.value;
+        state.selectedIds.clear();
+        state.selectedCell = null;
+        state.expandedGroups.clear();
+        resetPage();
+        if (!refs.automationForm.hidden) refreshRuleColumnOptions(refs.ruleColumnSelect.value);
+        refresh();
+      });
+      refs.groupFieldSelect.addEventListener("change", () => {
+        const sheet = currentSheet();
+        if (!sheet) return;
+        const selectedValue = refs.groupFieldSelect.value;
+        const selectedIndex = selectedValue === "" ? null : Number(selectedValue);
+        sheet.locationColumn = Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < sheet.width ? selectedIndex : null;
+        if (sheet.groupCache) sheet.groupCache.clear();
+        state.selectedIds.clear();
+        state.expandedGroups.clear();
+        resetPage();
+        if (!refs.automationForm.hidden) refreshRuleColumnOptions(refs.ruleColumnSelect.value);
+        refresh();
+        showToast(sheet.locationColumn === null ? "Grouping field cleared." : `Grouping field set to ${groupingFieldLabel(sheet)}.`, "success");
+      });
+      refs.searchInput.addEventListener("input", () => { state.search = refs.searchInput.value; state.searchNormalized = normalizeText(state.search); state.selectedIds.clear(); resetPage(); renderTable(); renderSelection(); });
+      refs.includeHidden.addEventListener("change", () => { state.includeHidden = refs.includeHidden.checked; state.selectedIds.clear(); resetPage(); renderTable(); renderSelection(); });
+      refs.scopeSelect.addEventListener("change", () => { state.scope = refs.scopeSelect.value; state.selectedIds.clear(); resetPage(); renderTable(); renderSelection(); });
+      refs.duplicateMode.addEventListener("change", () => { state.duplicateMode = refs.duplicateMode.value; state.selectedIds.clear(); resetPage(); refresh(); });
+      refs.sortSelect.addEventListener("change", () => { state.sort = refs.sortSelect.value; resetPage(); renderTable(); });
+      refs.viewTabs.forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.view; state.selectedIds.clear(); state.selectedCell = null; resetPage(); refresh(); }));
+      refs.tableBody.addEventListener("click", handleTableClick);
+      refs.tableHead.addEventListener("change", handleTableChange);
+      refs.tableBody.addEventListener("change", handleTableChange);
+      refs.automationButton.addEventListener("click", () => setAutomationPanel(!state.automationPanelOpen));
+      refs.closeAutomationButton.addEventListener("click", () => setAutomationPanel(false));
+      refs.addRuleButton.addEventListener("click", startNewAutomationRule);
+      refs.cancelRuleButton.addEventListener("click", cancelAutomationRule);
+      refs.automationForm.addEventListener("submit", saveAutomationRule);
+      refs.automationList.addEventListener("click", handleAutomationClick);
+      refs.automationList.addEventListener("change", handleAutomationChange);
+      refs.runAutomationButton.addEventListener("click", () => runAutomation());
+      refs.undoButton.addEventListener("click", undo);
+      refs.redoButton.addEventListener("click", redo);
+      refs.previousPageButton.addEventListener("click", () => { state.page = Math.max(1, state.page - 1); renderTable(); });
+      refs.nextPageButton.addEventListener("click", () => { state.page += 1; renderTable(); });
+      refs.hideZeroButton.addEventListener("click", hideZeroQuantity);
+      refs.restoreAllButton.addEventListener("click", restoreAll);
+      refs.exportCsvButton.addEventListener("click", exportCsv);
+      refs.exportXlsxButton.addEventListener("click", exportXlsx);
+      refs.clearButton.addEventListener("click", clearWorkspace);
+      refs.hideSelectedButton.addEventListener("click", () => applyToSelected(true));
+      refs.restoreSelectedButton.addEventListener("click", () => applyToSelected(false));
+      refs.clearSelectionButton.addEventListener("click", () => { state.selectedIds.clear(); refresh(); });
+      document.addEventListener("keydown", handleKeyboardShortcuts);
+      window.addEventListener("resize", placeSidebarSettings);
+
+      state.automationRules = loadAutomationRules();
+      placeSidebarSettings();
+      refreshRuleColumnOptions("product");
+      setEngineStatus();
+      refresh();
+    })();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
+          .catch((error) => console.warn("Sheetflow offline support is unavailable.", error));
+      });
+    }
+  </script>
+</body>
+</html>
