@@ -263,6 +263,25 @@
     .toast.error { border-color: rgba(180, 35, 24, .38); color: #912018; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
+    /* Block selection (long-press group select) */
+    .group-row[data-block-key] { cursor: pointer; user-select: none; -webkit-user-select: none; transition: background .12s; }
+    .group-row[data-block-key]:hover td { background: rgba(37, 99, 235, .06); }
+    .group-row.is-block-selected td { background: rgba(37, 99, 235, .1) !important; }
+    .group-row.is-block-selected td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
+    .group-row.is-block-selected:hover td { background: rgba(37, 99, 235, .14) !important; }
+    .block-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 10px 23px; border-bottom: 1px solid rgba(37, 99, 235, .22); background: linear-gradient(135deg, rgba(37, 99, 235, .07), rgba(37, 99, 235, .03)); }
+    .block-bar-copy { display: flex; align-items: center; gap: 12px; }
+    .block-bar-count { color: var(--amber); font-size: 11px; font-weight: 750; }
+    .block-bar-hint { color: var(--faint); font-size: 10px; }
+    .block-bar .selection-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .block-bar-pressing { position: absolute; z-index: 5; pointer-events: none; bottom: 0; left: 0; height: 3px; background: var(--amber); border-radius: 2px 0 0 0; transition: width .5s linear; }
+    .block-bar-pressing.is-active { width: 100% !important; }
+    @media (max-width: 570px) {
+      .block-bar { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+      .block-bar-hint { display: none; }
+      .block-bar .selection-actions { width: 100%; justify-content: flex-start; }
+    }
+
     @media (max-width: 1050px) {
       .main { padding-right: 24px; padding-left: 24px; }
       .filters { grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(125px, 1fr)); padding-right: 17px; padding-left: 17px; }
@@ -425,6 +444,7 @@
         </div>
         <div class="quick-bar"><div class="quick-copy" id="quickCopy"><strong>Nothing to organize yet.</strong></div><div class="quick-actions"><button class="button button-quiet button-small" id="hideZeroButton" type="button" disabled>Hide zero values</button><button class="button button-quiet button-small" id="restoreAllButton" type="button" disabled>Restore all</button><button class="button button-quiet button-small" id="exportCsvButton" type="button" disabled>Export CSV</button></div></div>
         <div class="selection-bar" id="selectionBar" hidden><span class="selection-count" id="selectionCount">0 selected</span><div class="selection-actions"><button class="button button-quiet button-small" id="hideSelectedButton" type="button">Hide selected</button><button class="button button-quiet button-small" id="restoreSelectedButton" type="button">Restore selected</button><button class="button button-ghost button-small" id="clearSelectionButton" type="button">Clear selection</button></div></div>
+        <div class="block-bar" id="blockBar" hidden><div class="block-bar-copy"><span class="block-bar-count" id="blockBarCount">0 groups selected</span><span class="block-bar-hint">Tap groups to select. Hold on a group to start.</span></div><div class="selection-actions"><button class="button button-quiet button-small" id="blockHideButton" type="button">Hide groups</button><button class="button button-quiet button-small" id="blockRestoreButton" type="button">Restore groups</button><button class="button button-primary button-small" id="blockRuleButton" type="button">Create rule from selection</button><button class="button button-ghost button-small" id="blockDoneButton" type="button">Done</button></div></div>
         <div class="table-stage">
           <div class="table-scroll" id="tableScroll" hidden><table id="stockTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div>
           <div class="empty-state" id="emptyState"><div class="empty-inner"><div class="empty-symbol">+</div><h3 id="emptyTitle">Bring in your spreadsheet</h3><p id="emptyCopy">Drop an XLSX or CSV file into the panel on the left. The organizer will detect useful fields automatically, and you can choose any columns for your workflow.</p></div></div>
@@ -465,7 +485,9 @@
         ruleOperatorSelect: $("ruleOperatorSelect"), ruleValueInput: $("ruleValueInput"),
         ruleValueField: $("ruleValueField"), bulkListSection: $("bulkListSection"), bulkListInput: $("bulkListInput"),
         bulkListFileInput: $("bulkListFileInput"), clearBulkListButton: $("clearBulkListButton"), bulkListCount: $("bulkListCount"),
-        cancelRuleButton: $("cancelRuleButton"), saveRuleButton: $("saveRuleButton"), toast: $("toast")
+        cancelRuleButton: $("cancelRuleButton"), saveRuleButton: $("saveRuleButton"), toast: $("toast"),
+        blockBar: $("blockBar"), blockBarCount: $("blockBarCount"), blockHideButton: $("blockHideButton"),
+        blockRestoreButton: $("blockRestoreButton"), blockRuleButton: $("blockRuleButton"), blockDoneButton: $("blockDoneButton")
       };
 
       const state = {
@@ -473,7 +495,8 @@
         view: "rows", scope: "active", sort: "original", duplicateMode: "product", search: "", searchNormalized: "", includeHidden: false,
         expandedGroups: new Set(), selectedIds: new Set(), selectedCell: null, toastTimer: null,
         loading: false, loadingFileName: "", page: 1, pageSize: 250, automationRules: [], automationPanelOpen: false, editingRuleId: null,
-        history: [], historyIndex: -1, bulkListItems: []
+        history: [], historyIndex: -1, bulkListItems: [],
+        selectedGroupKeys: new Set(), blockSelectMode: false, longPressTimer: null, longPressTriggered: false
       };
 
       const headerHints = ["location", "store", "branch", "site", "warehouse", "department", "division", "region", "area", "room", "section", "zone", "project", "team", "category", "customer", "client", "order", "case", "ticket", "record", "product", "item", "sku", "description", "quantity", "qty", "stock", "units", "amount", "total", "value", "balance", "count", "name"];
@@ -1349,7 +1372,8 @@
           const groupSelected = selectAllState(group.rows);
            const countLabel = group.rows.length > 1 ? `${group.rows.length} matches` : "1 row";
           const lines = group.rows.map((row) => `#${row.sourceRowNumber}`).join(", ");
-          return `<tr class="group-row ${visibleCount ? "" : "group-fully-hidden"}">
+          const blockSelected = state.selectedGroupKeys.has(group.key);
+          return `<tr class="group-row ${visibleCount ? "" : "group-fully-hidden"}${blockSelected ? " is-block-selected" : ""}" data-block-key="${groupToken(group.key)}">
             <td class="row-number-cell"><button class="expand-button" type="button" aria-label="Toggle group details" aria-expanded="${expanded}" data-action="toggle-group" data-group-key="${groupToken(group.key)}">></button></td>
             <td class="check-cell"><input type="checkbox" aria-label="Select ${escapeHTML(groupLabel(group, sheet))}" data-group-select="${groupToken(group.key)}" ${groupSelected.all ? "checked" : ""}></td>
             <td><div class="group-product"><strong title="${escapeHTML(groupLabel(group, sheet))}">${escapeHTML(groupLabel(group, sheet))}</strong><span class="group-count ${group.rows.length === 1 ? "unique" : ""}">${countLabel}</span></div></td>
@@ -1412,6 +1436,7 @@
         updateStats();
         renderTable();
         renderSelection();
+        renderBlockBar();
         renderAutomation();
       }
 
@@ -1552,6 +1577,7 @@
         state.expandedGroups.clear();
         state.selectedIds.clear();
         state.selectedCell = null;
+        exitBlockSelectMode();
         resetPage();
         resetHistory();
         refs.fileInput.value = "";
@@ -1612,7 +1638,133 @@
         }
       }
 
+      function enterBlockSelectMode(groupKey) {
+        state.blockSelectMode = true;
+        state.selectedGroupKeys.clear();
+        if (groupKey) state.selectedGroupKeys.add(groupKey);
+        renderBlockBar();
+        renderTable();
+        showToast(state.selectedGroupKeys.size ? "Block selection active. Tap groups to select them." : "Block selection active.", "success");
+      }
+
+      function exitBlockSelectMode() {
+        state.blockSelectMode = false;
+        state.selectedGroupKeys.clear();
+        state.longPressTriggered = false;
+        if (state.longPressTimer) { clearTimeout(state.longPressTimer); state.longPressTimer = null; }
+        renderBlockBar();
+        renderTable();
+      }
+
+      function toggleGroupBlockSelection(groupKey) {
+        if (state.selectedGroupKeys.has(groupKey)) state.selectedGroupKeys.delete(groupKey);
+        else state.selectedGroupKeys.add(groupKey);
+        if (state.selectedGroupKeys.size === 0) { exitBlockSelectMode(); return; }
+        renderBlockBar();
+        renderTable();
+      }
+
+      function applyBlockSelection(hidden) {
+        const sheet = currentSheet();
+        if (!sheet || !state.selectedGroupKeys.size) return;
+        const groups = buildGroups(sheet);
+        const before = captureVisibility();
+        let affectedCount = 0;
+        state.selectedGroupKeys.forEach((key) => {
+          const group = groups.get(key);
+          if (!group) return;
+          group.rows.forEach((row) => { if (row.hidden !== hidden) { row.hidden = hidden; affectedCount += 1; } });
+        });
+        const label = hidden ? "Hide selected groups" : "Restore selected groups";
+        commitVisibilityHistory(label, before);
+        const groupCount = state.selectedGroupKeys.size;
+        exitBlockSelectMode();
+        refresh();
+        showToast(`${affectedCount} row${affectedCount === 1 ? "" : "s"} across ${groupCount} group${groupCount === 1 ? "" : "s"} ${hidden ? "hidden" : "restored"}.`, hidden ? "" : "success");
+      }
+
+      function createRuleFromBlockSelection() {
+        const sheet = currentSheet();
+        if (!sheet || !state.selectedGroupKeys.size) return;
+        const groups = buildGroups(sheet);
+        let column, columnLabel, listItems;
+
+        if (state.duplicateMode === "location" && sheet.locationColumn !== null) {
+          column = "location";
+          columnLabel = groupingFieldLabel(sheet);
+          listItems = Array.from(state.selectedGroupKeys).map((key) => {
+            const group = groups.get(key);
+            if (!group) return "";
+            return valueToString(group.rows[0].values[sheet.locationColumn]).trim();
+          }).filter(Boolean);
+        } else if (sheet.productColumn !== null) {
+          column = "product";
+          columnLabel = productFieldLabel(sheet);
+          listItems = Array.from(state.selectedGroupKeys).map((key) => {
+            const group = groups.get(key);
+            if (!group) return "";
+            return productText(group.rows[0], sheet).trim();
+          }).filter(Boolean);
+        } else {
+          column = "any";
+          columnLabel = "Any column";
+          listItems = Array.from(state.selectedGroupKeys).map((key) => {
+            const group = groups.get(key);
+            if (!group) return "";
+            return group.rows[0].values.filter((v) => valueToString(v).trim()).map(valueToString).join(" ").trim();
+          }).filter(Boolean);
+        }
+
+        if (!listItems.length) { showToast("Could not extract values from selected groups.", "error"); return; }
+
+        listItems = [...new Set(listItems)];
+        exitBlockSelectMode();
+
+        setAutomationPanel(true);
+        state.editingRuleId = null;
+        refs.ruleFormTitle.textContent = "New rule from selection";
+        refs.ruleNameInput.value = `Hide ${listItems.length} selected group${listItems.length === 1 ? "" : "s"}`;
+        refs.ruleOperatorSelect.value = "list";
+        refs.bulkListInput.value = listItems.join("\n");
+        refreshRuleColumnOptions(column);
+        updateBulkListUI();
+        refs.automationForm.hidden = false;
+        refs.ruleNameInput.focus();
+        scrollAutomationPanelIntoView();
+        showToast(`${listItems.length} group${listItems.length === 1 ? "" : "s"} added to rule. Save when ready.`, "success");
+      }
+
+      function renderBlockBar() {
+        if (!refs.blockBar) return;
+        const visible = state.blockSelectMode && state.view === "groups";
+        refs.blockBar.hidden = !visible;
+        if (visible) {
+          const count = state.selectedGroupKeys.size;
+          refs.blockBarCount.textContent = count ? `${formatNumber(count)} group${count === 1 ? "" : "s"} selected` : "Select groups";
+          refs.blockHideButton.disabled = count === 0;
+          refs.blockRestoreButton.disabled = count === 0;
+          refs.blockRuleButton.disabled = count === 0;
+        }
+      }
+
       function handleTableClick(event) {
+        if (state.longPressTriggered) { state.longPressTriggered = false; return; }
+
+        if (state.blockSelectMode) {
+          const groupRow = event.target.closest("tr.group-row[data-block-key]");
+          if (groupRow && !event.target.closest("button, input")) {
+            toggleGroupBlockSelection(groupKeyFromToken(groupRow.dataset.blockKey));
+            return;
+          }
+          const btnAction = event.target.closest("[data-action]");
+          if (btnAction) {
+            if (btnAction.dataset.action === "toggle-group") toggleGroupExpanded(groupKeyFromToken(btnAction.dataset.groupKey));
+            if (btnAction.dataset.action === "toggle-row") toggleRow(btnAction.dataset.rowId);
+            if (btnAction.dataset.action === "toggle-group-hidden") toggleGroupHidden(groupKeyFromToken(btnAction.dataset.groupKey));
+          }
+          return;
+        }
+
         const cell = event.target.closest("[data-cell-row]");
         if (cell && !event.target.closest("button, input")) {
           state.selectedCell = { rowId: cell.dataset.cellRow, columnIndex: Number(cell.dataset.cellColumn) };
@@ -1742,6 +1894,7 @@
         state.selectedIds.clear();
         state.selectedCell = null;
         state.expandedGroups.clear();
+        exitBlockSelectMode();
         resetPage();
         if (!refs.automationForm.hidden) refreshRuleColumnOptions(refs.ruleColumnSelect.value);
         refresh();
@@ -1765,7 +1918,7 @@
       refs.scopeSelect.addEventListener("change", () => { state.scope = refs.scopeSelect.value; state.selectedIds.clear(); resetPage(); renderTable(); renderSelection(); });
       refs.duplicateMode.addEventListener("change", () => { state.duplicateMode = refs.duplicateMode.value; state.selectedIds.clear(); resetPage(); refresh(); });
       refs.sortSelect.addEventListener("change", () => { state.sort = refs.sortSelect.value; resetPage(); renderTable(); });
-      refs.viewTabs.forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.view; state.selectedIds.clear(); state.selectedCell = null; resetPage(); refresh(); }));
+      refs.viewTabs.forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.view; state.selectedIds.clear(); state.selectedCell = null; if (button.dataset.view !== "groups") exitBlockSelectMode(); resetPage(); refresh(); }));
       refs.tableBody.addEventListener("click", handleTableClick);
       refs.tableHead.addEventListener("change", handleTableChange);
       refs.tableBody.addEventListener("change", handleTableChange);
@@ -1795,6 +1948,40 @@
       refs.clearSelectionButton.addEventListener("click", () => { state.selectedIds.clear(); refresh(); });
       document.addEventListener("keydown", handleKeyboardShortcuts);
       window.addEventListener("resize", placeSidebarSettings);
+
+      /* Block selection — long-press + tap */
+      refs.blockHideButton.addEventListener("click", () => applyBlockSelection(true));
+      refs.blockRestoreButton.addEventListener("click", () => applyBlockSelection(false));
+      refs.blockRuleButton.addEventListener("click", createRuleFromBlockSelection);
+      refs.blockDoneButton.addEventListener("click", exitBlockSelectMode);
+
+      function handleBlockPointerDown(event) {
+        if (event.target.closest("button, input, a, .expand-button")) return;
+        const groupRow = event.target.closest("tr.group-row[data-block-key]");
+        if (!groupRow) return;
+        state.longPressTriggered = false;
+        state.longPressTimer = setTimeout(() => {
+          state.longPressTriggered = true;
+          state.longPressTimer = null;
+          if (navigator.vibrate) navigator.vibrate(30);
+          const key = groupKeyFromToken(groupRow.dataset.blockKey);
+          if (!state.blockSelectMode) enterBlockSelectMode(key);
+          else toggleGroupBlockSelection(key);
+        }, 500);
+      }
+
+      function handleBlockPointerUp() {
+        if (state.longPressTimer) { clearTimeout(state.longPressTimer); state.longPressTimer = null; }
+      }
+
+      refs.tableBody.addEventListener("mousedown", (e) => { if (e.button === 0) handleBlockPointerDown(e); });
+      refs.tableBody.addEventListener("mouseup", handleBlockPointerUp);
+      refs.tableBody.addEventListener("mouseleave", handleBlockPointerUp);
+      refs.tableBody.addEventListener("touchstart", (e) => handleBlockPointerDown(e.touches[0]), { passive: true });
+      refs.tableBody.addEventListener("touchend", handleBlockPointerUp);
+      refs.tableBody.addEventListener("touchcancel", handleBlockPointerUp);
+
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.blockSelectMode) exitBlockSelectMode(); });
 
       state.automationRules = loadAutomationRules();
       placeSidebarSettings();
