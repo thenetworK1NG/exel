@@ -164,6 +164,16 @@
     .form-field input, .form-field select { min-height: 37px; width: 100%; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); outline: none; color: var(--text); background: var(--panel); }
     .form-field input:focus, .form-field select:focus { border-color: rgba(37, 99, 235, .55); box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
     .automation-form-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
+    .bulk-list-area { margin-top: 10px; }
+    .bulk-list-area textarea {
+      width: 100%; min-height: 110px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+      outline: none; color: var(--text); background: var(--panel); font-family: inherit; font-size: 12px; line-height: 1.6;
+      resize: vertical; transition: border-color .16s, box-shadow .16s;
+    }
+    .bulk-list-area textarea:focus { border-color: rgba(37, 99, 235, .55); box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
+    .bulk-list-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .bulk-import-label { cursor: pointer; }
+    .bulk-list-count { margin-left: auto; color: var(--faint); font-size: 10px; font-weight: 700; }
 
     .workspace { margin-top: 28px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow); }
     .workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 22px 23px 19px; border-bottom: 1px solid var(--line); }
@@ -384,8 +394,19 @@
           <div class="automation-form-grid">
             <label class="form-field"><span>Rule name</span><input id="ruleNameInput" type="text" maxlength="80" placeholder="Hide unwanted records"></label>
             <label class="form-field"><span>Column</span><select id="ruleColumnSelect"></select></label>
-            <label class="form-field"><span>Condition</span><select id="ruleOperatorSelect"><option value="contains">Contains</option><option value="equals">Equals</option></select></label>
-            <label class="form-field"><span>Value</span><input id="ruleValueInput" type="text" maxlength="120" placeholder="TEST or <empty>"><small class="form-hint">Use &lt;empty&gt; to match blank cells.</small></label>
+            <label class="form-field"><span>Condition</span><select id="ruleOperatorSelect"><option value="contains">Contains</option><option value="equals">Equals</option><option value="list">List (bulk hide)</option></select></label>
+            <label class="form-field" id="ruleValueField"><span>Value</span><input id="ruleValueInput" type="text" maxlength="120" placeholder="TEST or <empty>"><small class="form-hint">Use &lt;empty&gt; to match blank cells.</small></label>
+          </div>
+          <div id="bulkListSection" hidden>
+            <div class="bulk-list-area">
+              <label class="form-field"><span>Paste product list</span><small class="form-hint">One item per line, or comma-separated. Rows matching any item will be hidden.</small></label>
+              <textarea id="bulkListInput" rows="6" placeholder="Product A&#10;Product B&#10;Product C"></textarea>
+              <div class="bulk-list-actions">
+                <label class="button button-quiet button-small bulk-import-label">Import list from file<input type="file" id="bulkListFileInput" accept=".xlsx,.xls,.csv,.tsv" hidden></label>
+                <button class="button button-ghost button-small" id="clearBulkListButton" type="button">Clear list</button>
+                <span class="bulk-list-count" id="bulkListCount">0 items</span>
+              </div>
+            </div>
           </div>
           <div class="automation-form-actions"><button class="button button-ghost button-small" id="cancelRuleButton" type="button">Cancel</button><button class="button button-primary button-small" id="saveRuleButton" type="submit">Save rule</button></div>
         </form>
@@ -441,7 +462,10 @@
         automationPanel: $("automationPanel"), automationSummary: $("automationSummary"), automationList: $("automationList"),
         runAutomationButton: $("runAutomationButton"), addRuleButton: $("addRuleButton"), closeAutomationButton: $("closeAutomationButton"),
         automationForm: $("automationForm"), ruleFormTitle: $("ruleFormTitle"), ruleNameInput: $("ruleNameInput"), ruleColumnSelect: $("ruleColumnSelect"),
-        ruleOperatorSelect: $("ruleOperatorSelect"), ruleValueInput: $("ruleValueInput"), cancelRuleButton: $("cancelRuleButton"), saveRuleButton: $("saveRuleButton"), toast: $("toast")
+        ruleOperatorSelect: $("ruleOperatorSelect"), ruleValueInput: $("ruleValueInput"),
+        ruleValueField: $("ruleValueField"), bulkListSection: $("bulkListSection"), bulkListInput: $("bulkListInput"),
+        bulkListFileInput: $("bulkListFileInput"), clearBulkListButton: $("clearBulkListButton"), bulkListCount: $("bulkListCount"),
+        cancelRuleButton: $("cancelRuleButton"), saveRuleButton: $("saveRuleButton"), toast: $("toast")
       };
 
       const state = {
@@ -449,12 +473,63 @@
         view: "rows", scope: "active", sort: "original", duplicateMode: "product", search: "", searchNormalized: "", includeHidden: false,
         expandedGroups: new Set(), selectedIds: new Set(), selectedCell: null, toastTimer: null,
         loading: false, loadingFileName: "", page: 1, pageSize: 250, automationRules: [], automationPanelOpen: false, editingRuleId: null,
-        history: [], historyIndex: -1
+        history: [], historyIndex: -1, bulkListItems: []
       };
 
       const headerHints = ["location", "store", "branch", "site", "warehouse", "department", "division", "region", "area", "room", "section", "zone", "project", "team", "category", "customer", "client", "order", "case", "ticket", "record", "product", "item", "sku", "description", "quantity", "qty", "stock", "units", "amount", "total", "value", "balance", "count", "name"];
       const automationStorageKey = "stockflow-automation-rules-v1";
       const emptyToken = "<empty>";
+
+      function parseBulkList(text) {
+        return text.split(/[\r\n,]+/).map((item) => normalizeText(item)).filter(Boolean);
+      }
+
+      function updateBulkListUI() {
+        const isList = refs.ruleOperatorSelect.value === "list";
+        refs.ruleValueField.hidden = isList;
+        refs.bulkListSection.hidden = !isList;
+        state.bulkListItems = parseBulkList(refs.bulkListInput.value);
+        refs.bulkListCount.textContent = `${state.bulkListItems.length} item${state.bulkListItems.length === 1 ? "" : "s"}`;
+      }
+
+      async function importBulkListFile(file) {
+        if (!file) return;
+        const ext = file.name.split(".").pop().toLocaleLowerCase();
+        try {
+          let items = [];
+          if (ext === "csv" || ext === "tsv") {
+            let text = await file.text();
+            if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+            const delimiter = ext === "tsv" ? "\t" : detectDelimiter(text);
+            const rows = parseDelimited(text, delimiter);
+            rows.forEach((row) => row.forEach((cell) => {
+              const val = valueToString(cell).trim();
+              if (val) items.push(val);
+            }));
+          } else if (["xlsx", "xls"].includes(ext)) {
+            if (!hasEngine()) { showToast("XLSX engine unavailable. Try CSV.", "error"); return; }
+            const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, raw: true });
+            workbook.SheetNames.forEach((name) => {
+              const aoa = window.XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: "", raw: true });
+              aoa.forEach((row) => (Array.isArray(row) ? row : []).forEach((cell) => {
+                const val = valueToString(cell).trim();
+                if (val) items.push(val);
+              }));
+            });
+          } else {
+            showToast("Use XLSX or CSV files for list import.", "error"); return;
+          }
+          items = [...new Set(items)];
+          if (!items.length) { showToast("No items found in that file.", "error"); return; }
+          const existing = refs.bulkListInput.value.trim();
+          refs.bulkListInput.value = existing ? existing + "\n" + items.join("\n") : items.join("\n");
+          updateBulkListUI();
+          showToast(`${items.length} items imported from ${file.name}.`, "success");
+        } catch (error) {
+          console.error(error);
+          showToast("Could not read that file.", "error");
+        }
+      }
 
       function hasEngine() {
         return typeof window.XLSX !== "undefined" && window.XLSX && window.XLSX.utils;
@@ -468,9 +543,10 @@
           return saved.filter((rule) => rule && typeof rule === "object").map((rule) => ({
             id: String(rule.id || `rule-${Date.now()}-${Math.random().toString(36).slice(2)}`),
             name: String(rule.name || "Untitled rule"), column: String(rule.column || "product"),
-            columnLabel: String(rule.columnLabel || "Record"), operator: rule.operator === "equals" ? "equals" : "contains",
+            columnLabel: String(rule.columnLabel || "Record"), operator: rule.operator === "list" ? "list" : (rule.operator === "equals" ? "equals" : "contains"),
             value: String(rule.value || ""), enabled: rule.enabled !== false, lastAffected: Number(rule.lastAffected) || 0,
-            lastRunAt: String(rule.lastRunAt || "")
+            lastRunAt: String(rule.lastRunAt || ""),
+            listItems: Array.isArray(rule.listItems) ? rule.listItems.map(String) : []
           }));
         } catch (error) {
           console.warn("Automation rules could not be loaded.", error);
@@ -790,11 +866,20 @@
       }
 
       function matchesAutomationRule(row, sheet, rule) {
-        const needle = normalizeText(rule.value);
-        if (!needle || row.blank) return false;
+        if (row.blank) return false;
         const columnIndex = automationColumnIndex(rule, sheet);
         if (rule.column !== "any" && columnIndex === null) return false;
         const values = rule.column === "any" ? row.values : [row.values[columnIndex]];
+        if (rule.operator === "list") {
+          const items = Array.isArray(rule.listItems) ? rule.listItems : parseBulkList(rule.value || "");
+          if (!items.length) return false;
+          return values.some((value) => {
+            const text = normalizeText(value);
+            return items.some((item) => text === item || text.includes(item));
+          });
+        }
+        const needle = normalizeText(rule.value);
+        if (!needle) return false;
         return values.some((value) => {
           if (needle === emptyToken) return !valueToString(value).trim();
           const text = normalizeText(value);
@@ -840,11 +925,13 @@
           return;
         }
         refs.automationList.innerHTML = state.automationRules.map((rule) => {
-          const operator = rule.operator === "equals" ? "equals" : "contains";
+          const isList = rule.operator === "list";
+          const operator = isList ? "list" : (rule.operator === "equals" ? "equals" : "contains");
+          const valueDisplay = isList ? `${(rule.listItems || []).length} items` : escapeHTML(rule.value);
           const lastRun = rule.lastRunAt ? `Last run: ${new Date(rule.lastRunAt).toLocaleString()} / ${formatNumber(rule.lastAffected)} rows affected` : "Not run yet";
           return `<div class="automation-rule ${rule.enabled ? "" : "is-disabled"}">
             <label class="rule-toggle" title="${rule.enabled ? "Disable rule" : "Enable rule"}"><input type="checkbox" data-rule-toggle="${escapeHTML(rule.id)}" ${rule.enabled ? "checked" : ""}></label>
-             <div class="automation-rule-copy"><strong>${escapeHTML(rule.name)}</strong><p><span>${escapeHTML(automationRuleLabel(rule))}</span> ${operator} <code>${escapeHTML(rule.value)}</code> <span>-> Hide row</span></p><span class="automation-rule-meta">${escapeHTML(lastRun)}</span></div>
+             <div class="automation-rule-copy"><strong>${escapeHTML(rule.name)}</strong><p><span>${escapeHTML(automationRuleLabel(rule))}</span> ${operator} <code>${isList ? "list" : escapeHTML(rule.value)}</code> <span>-> Hide row</span></p><span class="automation-rule-meta">${isList ? `${valueDisplay} in list / ` : ""}${escapeHTML(lastRun)}</span></div>
             <div class="automation-rule-actions"><button class="button button-quiet" type="button" data-automation-action="edit" data-rule-id="${escapeHTML(rule.id)}">Edit</button><button class="button button-danger" type="button" data-automation-action="delete" data-rule-id="${escapeHTML(rule.id)}">Delete</button></div>
           </div>`;
         }).join("");
@@ -872,6 +959,8 @@
         refs.ruleNameInput.value = "";
         refs.ruleOperatorSelect.value = "contains";
         refs.ruleValueInput.value = "";
+        refs.bulkListInput.value = "";
+        updateBulkListUI();
         refreshRuleColumnOptions("product");
         refs.automationForm.hidden = false;
         refs.ruleNameInput.focus();
@@ -885,8 +974,14 @@
         state.editingRuleId = id;
         refs.ruleFormTitle.textContent = "Edit automation rule";
         refs.ruleNameInput.value = rule.name;
-        refs.ruleOperatorSelect.value = rule.operator;
-        refs.ruleValueInput.value = rule.value;
+        refs.ruleOperatorSelect.value = rule.operator === "list" ? "list" : rule.operator;
+        refs.ruleValueInput.value = rule.value || "";
+        if (rule.operator === "list") {
+          refs.bulkListInput.value = (rule.listItems || []).join("\n");
+        } else {
+          refs.bulkListInput.value = "";
+        }
+        updateBulkListUI();
         refreshRuleColumnOptions(rule.column);
         refs.automationForm.hidden = false;
         refs.ruleNameInput.focus();
@@ -896,22 +991,31 @@
       function cancelAutomationRule() {
         state.editingRuleId = null;
         refs.automationForm.hidden = true;
+        refs.bulkListInput.value = "";
+        updateBulkListUI();
       }
 
       function saveAutomationRule(event) {
         event.preventDefault();
         const name = refs.ruleNameInput.value.trim();
-        const value = refs.ruleValueInput.value.trim();
-        if (!name || !value) {
+        const operator = refs.ruleOperatorSelect.value === "list" ? "list" : (refs.ruleOperatorSelect.value === "equals" ? "equals" : "contains");
+        const isList = operator === "list";
+        let value = "";
+        let listItems = [];
+        if (isList) {
+          listItems = parseBulkList(refs.bulkListInput.value);
+          if (!listItems.length) { showToast("Add at least one item to the list before saving.", "error"); return; }
+          value = listItems.join("\n");
+        } else {
+          value = refs.ruleValueInput.value.trim();
+        }
+        if (!name || (!isList && !value)) {
           showToast("Add a rule name and a value before saving.", "error");
           return;
         }
         const column = refs.ruleColumnSelect.value || "product";
         const selectedOption = refs.ruleColumnSelect.options[refs.ruleColumnSelect.selectedIndex];
-        const nextRule = {
-          name, column, columnLabel: selectedOption ? selectedOption.textContent : column,
-          operator: refs.ruleOperatorSelect.value === "equals" ? "equals" : "contains", value
-        };
+        const nextRule = { name, column, columnLabel: selectedOption ? selectedOption.textContent : column, operator, value, listItems: isList ? listItems : [] };
         const existing = state.automationRules.find((rule) => rule.id === state.editingRuleId);
         if (existing) {
           Object.assign(existing, nextRule);
@@ -936,7 +1040,7 @@
       }
 
       function runAutomation(options = {}) {
-        const enabledRules = state.automationRules.filter((rule) => rule.enabled && normalizeText(rule.value));
+        const enabledRules = state.automationRules.filter((rule) => rule.enabled && (rule.operator === "list" ? (rule.listItems || []).length > 0 : normalizeText(rule.value)));
         if (!enabledRules.length) return { hiddenCount: 0, enabledCount: 0, changed: false };
         const before = captureVisibility();
         let hiddenCount = 0;
@@ -1670,6 +1774,10 @@
       refs.addRuleButton.addEventListener("click", startNewAutomationRule);
       refs.cancelRuleButton.addEventListener("click", cancelAutomationRule);
       refs.automationForm.addEventListener("submit", saveAutomationRule);
+      refs.ruleOperatorSelect.addEventListener("change", updateBulkListUI);
+      refs.bulkListInput.addEventListener("input", () => { state.bulkListItems = parseBulkList(refs.bulkListInput.value); refs.bulkListCount.textContent = `${state.bulkListItems.length} item${state.bulkListItems.length === 1 ? "" : "s"}`; });
+      refs.bulkListFileInput.addEventListener("change", (e) => { importBulkListFile(e.target.files[0]); e.target.value = ""; });
+      refs.clearBulkListButton.addEventListener("click", () => { refs.bulkListInput.value = ""; updateBulkListUI(); });
       refs.automationList.addEventListener("click", handleAutomationClick);
       refs.automationList.addEventListener("change", handleAutomationChange);
       refs.runAutomationButton.addEventListener("click", () => runAutomation());
