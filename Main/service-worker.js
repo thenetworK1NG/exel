@@ -1,4 +1,4 @@
-const CACHE_NAME = "sheetflow-shell-v3";
+const CACHE_NAME = "sheetflow-shell-v4";
 const APP_SHELL = [
   "./stock-organizer.html",
   "./manifest.webmanifest",
