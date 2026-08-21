@@ -174,6 +174,24 @@
     .bulk-list-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
     .bulk-import-label { cursor: pointer; }
     .bulk-list-count { margin-left: auto; color: var(--faint); font-size: 10px; font-weight: 700; }
+    .rule-type-row { display: grid; grid-template-columns: minmax(220px, 300px); gap: 9px; margin-bottom: 9px; }
+    .column-picker-section { margin-top: 10px; }
+    .column-picker-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .column-picker {
+      display: flex; flex-wrap: wrap; gap: 7px; max-height: 158px; overflow-y: auto; margin-top: 8px; padding: 10px;
+      border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel);
+    }
+    .column-chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid var(--line);
+      border-radius: 999px; color: var(--muted); background: var(--panel-raised); font-size: 11px; font-weight: 650;
+      cursor: pointer; user-select: none; transition: border-color .14s, color .14s, background .14s;
+    }
+    .column-chip input { width: 13px; height: 13px; margin: 0; accent-color: var(--amber); cursor: pointer; }
+    .column-chip:hover { border-color: var(--line-strong); color: var(--text); }
+    .column-chip.is-checked { border-color: rgba(37, 99, 235, .45); color: var(--amber); background: var(--amber-soft); }
+    .column-picker-empty { color: var(--faint); font-size: 11px; }
+    .column-picker-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+    .column-picker-count { color: var(--faint); font-size: 10px; font-weight: 700; }
 
     .workspace { margin-top: 28px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow); }
     .workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 22px 23px 19px; border-bottom: 1px solid var(--line); }
@@ -409,8 +427,11 @@
         </div>
         <div class="automation-list" id="automationList"></div>
         <form class="automation-form" id="automationForm" hidden>
-          <div class="automation-form-head"><strong id="ruleFormTitle">New automation rule</strong><span>Rules hide matching rows; they never delete data.</span></div>
-          <div class="automation-form-grid">
+          <div class="automation-form-head"><strong id="ruleFormTitle">New automation rule</strong><span id="ruleFormHint">Rules hide matching rows; they never delete data.</span></div>
+          <div class="rule-type-row">
+            <label class="form-field"><span>Rule type</span><select id="ruleActionSelect"><option value="hide-rows">Hide matching rows</option><option value="hide-columns">Hide specific columns</option></select></label>
+          </div>
+          <div class="automation-form-grid" id="rowRuleFields">
             <label class="form-field"><span>Rule name</span><input id="ruleNameInput" type="text" maxlength="80" placeholder="Hide unwanted records"></label>
             <label class="form-field"><span>Column</span><select id="ruleColumnSelect"></select></label>
             <label class="form-field"><span>Condition</span><select id="ruleOperatorSelect"><option value="contains">Contains</option><option value="equals">Equals</option><option value="list">List (bulk hide)</option></select></label>
@@ -425,6 +446,17 @@
                 <button class="button button-ghost button-small" id="clearBulkListButton" type="button">Clear list</button>
                 <span class="bulk-list-count" id="bulkListCount">0 items</span>
               </div>
+            </div>
+          </div>
+          <div class="column-picker-section" id="columnPickerSection" hidden>
+            <div class="column-picker-head">
+              <label class="form-field"><span>Columns to hide</span></label>
+              <button class="button button-ghost button-small" id="clearColumnSelectionButton" type="button">Clear selection</button>
+            </div>
+            <div class="column-picker" id="columnPicker"></div>
+            <div class="column-picker-foot">
+              <small class="form-hint">Hidden columns disappear from the workspace and are left out of exports. Your original file keeps every column.</small>
+              <span class="column-picker-count" id="columnPickerCount">0 columns selected</span>
             </div>
           </div>
           <div class="automation-form-actions"><button class="button button-ghost button-small" id="cancelRuleButton" type="button">Cancel</button><button class="button button-primary button-small" id="saveRuleButton" type="submit">Save rule</button></div>
@@ -442,7 +474,7 @@
           <div class="select-wrap"><label class="sr-only" for="duplicateMode">Grouping mode</label><select id="duplicateMode" disabled><option value="product">Group by record</option><option value="location">Group by selected field</option><option value="product-location">Group by record + selected field</option><option value="exact">Group by exact row</option></select></div>
           <div class="select-wrap"><label class="sr-only" for="sortSelect">Sort displayed rows</label><select id="sortSelect" disabled><option value="original">Original sheet order</option><option value="product">Record A-Z</option><option value="quantity">Value high-low</option></select></div>
         </div>
-        <div class="quick-bar"><div class="quick-copy" id="quickCopy"><strong>Nothing to organize yet.</strong></div><div class="quick-actions"><button class="button button-quiet button-small" id="hideZeroButton" type="button" disabled>Hide zero values</button><button class="button button-quiet button-small" id="restoreAllButton" type="button" disabled>Restore all</button><button class="button button-quiet button-small" id="exportCsvButton" type="button" disabled>Export CSV</button></div></div>
+        <div class="quick-bar"><div class="quick-copy" id="quickCopy"><strong>Nothing to organize yet.</strong></div><div class="quick-actions"><button class="button button-quiet button-small" id="hideZeroButton" type="button" disabled>Hide zero values</button><button class="button button-quiet button-small" id="restoreAllButton" type="button" disabled>Restore all</button><button class="button button-quiet button-small" id="showColumnsButton" type="button" disabled title="Bring back columns hidden by automation rules">Show columns</button><button class="button button-quiet button-small" id="exportCsvButton" type="button" disabled>Export CSV</button></div></div>
         <div class="selection-bar" id="selectionBar" hidden><span class="selection-count" id="selectionCount">0 selected</span><div class="selection-actions"><button class="button button-quiet button-small" id="hideSelectedButton" type="button">Hide selected</button><button class="button button-quiet button-small" id="restoreSelectedButton" type="button">Restore selected</button><button class="button button-ghost button-small" id="clearSelectionButton" type="button">Clear selection</button></div></div>
         <div class="block-bar" id="blockBar" hidden><div class="block-bar-copy"><span class="block-bar-count" id="blockBarCount">0 groups selected</span><span class="block-bar-hint">Tap groups to select. Hold on a group to start.</span></div><div class="selection-actions"><button class="button button-quiet button-small" id="blockHideButton" type="button">Hide groups</button><button class="button button-quiet button-small" id="blockRestoreButton" type="button">Restore groups</button><button class="button button-primary button-small" id="blockRuleButton" type="button">Create rule from selection</button><button class="button button-ghost button-small" id="blockDoneButton" type="button">Done</button></div></div>
         <div class="table-stage">
@@ -473,7 +505,7 @@
         tableSubtitle: $("tableSubtitle"), viewTabs: Array.from(document.querySelectorAll("[data-view]")),
         searchInput: $("searchInput"), includeHidden: $("includeHidden"), scopeSelect: $("scopeSelect"), duplicateMode: $("duplicateMode"),
         sortSelect: $("sortSelect"), quickCopy: $("quickCopy"), hideZeroButton: $("hideZeroButton"),
-        restoreAllButton: $("restoreAllButton"), exportCsvButton: $("exportCsvButton"), selectionBar: $("selectionBar"),
+        restoreAllButton: $("restoreAllButton"), showColumnsButton: $("showColumnsButton"), exportCsvButton: $("exportCsvButton"), selectionBar: $("selectionBar"),
         selectionCount: $("selectionCount"), hideSelectedButton: $("hideSelectedButton"),
         restoreSelectedButton: $("restoreSelectedButton"), clearSelectionButton: $("clearSelectionButton"),
         tableScroll: $("tableScroll"), tableHead: $("tableHead"), tableBody: $("tableBody"), emptyState: $("emptyState"),
@@ -481,7 +513,9 @@
         pageControls: $("pageControls"), previousPageButton: $("previousPageButton"), pageStatus: $("pageStatus"), nextPageButton: $("nextPageButton"),
         automationPanel: $("automationPanel"), automationSummary: $("automationSummary"), automationList: $("automationList"),
         runAutomationButton: $("runAutomationButton"), addRuleButton: $("addRuleButton"), closeAutomationButton: $("closeAutomationButton"),
-        automationForm: $("automationForm"), ruleFormTitle: $("ruleFormTitle"), ruleNameInput: $("ruleNameInput"), ruleColumnSelect: $("ruleColumnSelect"),
+        automationForm: $("automationForm"), ruleFormTitle: $("ruleFormTitle"), ruleFormHint: $("ruleFormHint"), ruleNameInput: $("ruleNameInput"), ruleColumnSelect: $("ruleColumnSelect"),
+        ruleActionSelect: $("ruleActionSelect"), rowRuleFields: $("rowRuleFields"), columnPickerSection: $("columnPickerSection"),
+        columnPicker: $("columnPicker"), columnPickerCount: $("columnPickerCount"), clearColumnSelectionButton: $("clearColumnSelectionButton"),
         ruleOperatorSelect: $("ruleOperatorSelect"), ruleValueInput: $("ruleValueInput"),
         ruleValueField: $("ruleValueField"), bulkListSection: $("bulkListSection"), bulkListInput: $("bulkListInput"),
         bulkListFileInput: $("bulkListFileInput"), clearBulkListButton: $("clearBulkListButton"), bulkListCount: $("bulkListCount"),
@@ -507,12 +541,67 @@
         return text.split(/[\r\n,]+/).map((item) => normalizeText(item)).filter(Boolean);
       }
 
+      function ruleActionOf(rule) {
+        return rule && rule.action === "hide-columns" ? "hide-columns" : "hide-rows";
+      }
+
       function updateBulkListUI() {
+        const hideColumns = refs.ruleActionSelect.value === "hide-columns";
         const isList = refs.ruleOperatorSelect.value === "list";
-        refs.ruleValueField.hidden = isList;
-        refs.bulkListSection.hidden = !isList;
+        refs.ruleValueField.hidden = hideColumns || isList;
+        refs.bulkListSection.hidden = hideColumns || !isList;
         state.bulkListItems = parseBulkList(refs.bulkListInput.value);
         refs.bulkListCount.textContent = `${state.bulkListItems.length} item${state.bulkListItems.length === 1 ? "" : "s"}`;
+      }
+
+      function updateRuleTypeUI() {
+        const hideColumns = refs.ruleActionSelect.value === "hide-columns";
+        refs.rowRuleFields.hidden = hideColumns;
+        refs.columnPickerSection.hidden = !hideColumns;
+        refs.ruleFormHint.textContent = hideColumns
+          ? "Column rules tidy the view and exports; they never delete data."
+          : "Rules hide matching rows; they never delete data.";
+        updateBulkListUI();
+      }
+
+      function pickedColumnIndexes() {
+        return Array.from(refs.columnPicker.querySelectorAll("input[type=checkbox]:checked"))
+          .map((input) => Number(input.value))
+          .sort((first, second) => first - second);
+      }
+
+      function updateColumnPickerCount() {
+        const count = pickedColumnIndexes().length;
+        refs.columnPickerCount.textContent = `${formatNumber(count)} column${count === 1 ? "" : "s"} selected`;
+      }
+
+      function refreshColumnPicker(selectedIndexes) {
+        const sheet = currentSheet();
+        const wanted = Array.isArray(selectedIndexes) ? selectedIndexes : [];
+        refs.columnPicker.innerHTML = "";
+        if (!sheet) {
+          refs.columnPicker.innerHTML = '<div class="column-picker-empty">Import a spreadsheet to choose columns.</div>';
+          updateColumnPickerCount();
+          return;
+        }
+        sheet.headers.forEach((header, index) => {
+          const label = valueToString(header).trim() || `Column ${index + 1}`;
+          const chip = document.createElement("label");
+          chip.className = "column-chip";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.value = String(index);
+          input.checked = wanted.includes(index);
+          if (input.checked) chip.classList.add("is-checked");
+          input.addEventListener("change", () => {
+            chip.classList.toggle("is-checked", input.checked);
+            updateColumnPickerCount();
+          });
+          chip.appendChild(input);
+          chip.appendChild(document.createTextNode(label));
+          refs.columnPicker.appendChild(chip);
+        });
+        updateColumnPickerCount();
       }
 
       async function importBulkListFile(file) {
@@ -569,7 +658,13 @@
             columnLabel: String(rule.columnLabel || "Record"), operator: rule.operator === "list" ? "list" : (rule.operator === "equals" ? "equals" : "contains"),
             value: String(rule.value || ""), enabled: rule.enabled !== false, lastAffected: Number(rule.lastAffected) || 0,
             lastRunAt: String(rule.lastRunAt || ""),
-            listItems: Array.isArray(rule.listItems) ? rule.listItems.map(String) : []
+            listItems: Array.isArray(rule.listItems) ? rule.listItems.map(String) : [],
+            action: rule.action === "hide-columns" ? "hide-columns" : "hide-rows",
+            columns: Array.isArray(rule.columns) ? rule.columns
+              .filter((entry) => entry && Number.isFinite(Number(entry.index)))
+              .map((entry) => ({ index: Number(entry.index), label: String(entry.label || `Column ${Number(entry.index) + 1}`) }))
+              .filter((entry, index, list) => list.findIndex((other) => other.index === entry.index) === index)
+            : []
           }));
         } catch (error) {
           console.warn("Automation rules could not be loaded.", error);
@@ -690,7 +785,7 @@
         return {
           name, sourceSheet, width, headerIndex, headerValues, headers, prefixRows, rows, groupCache: new Map(),
            productColumn: product >= 0 ? product : null, locationColumn: location >= 0 ? location : null,
-          quantityColumn: quantity >= 0 ? quantity : null
+          quantityColumn: quantity >= 0 ? quantity : null, hiddenColumns: new Set()
         };
       }
 
@@ -873,6 +968,24 @@
         return values.length ? formatNumber(values.reduce((total, value) => total + value, 0)) : "-";
       }
 
+      function visibleColumnIndexes(sheet) {
+        const hidden = sheet && sheet.hiddenColumns instanceof Set ? sheet.hiddenColumns : new Set();
+        const indexes = [];
+        for (let index = 0; index < sheet.width; index += 1) {
+          if (!hidden.has(index)) indexes.push(index);
+        }
+        return indexes;
+      }
+
+      function resolveRuleColumns(rule, sheet) {
+        return (Array.isArray(rule.columns) ? rule.columns : []).map((entry) => {
+          const wanted = normalizeText(entry.label);
+          const matchIndex = sheet.headers.findIndex((header) => normalizeText(header) === wanted);
+          if (matchIndex >= 0) return matchIndex;
+          return Number.isInteger(entry.index) && entry.index >= 0 && entry.index < sheet.width ? entry.index : null;
+        }).filter((index, position, list) => index !== null && list.indexOf(index) === position);
+      }
+
       function automationColumnIndex(rule, sheet) {
         if (rule.column === "product") return sheet.productColumn;
         if (rule.column === "location") return sheet.locationColumn;
@@ -944,17 +1057,22 @@
           : "Create rules for the rows you remove every day.";
         refs.runAutomationButton.disabled = !currentSheet() || state.loading;
         if (!state.automationRules.length) {
-          refs.automationList.innerHTML = '<div class="automation-empty">No rules yet. Add a rule such as Record contains TEST to hide unwanted rows automatically.</div>';
+          refs.automationList.innerHTML = '<div class="automation-empty">No rules yet. Add a rule such as Record contains TEST to hide unwanted rows, or choose Hide specific columns to tidy the view automatically.</div>';
           return;
         }
         refs.automationList.innerHTML = state.automationRules.map((rule) => {
           const isList = rule.operator === "list";
+          const isColumnRule = ruleActionOf(rule) === "hide-columns";
           const operator = isList ? "list" : (rule.operator === "equals" ? "equals" : "contains");
           const valueDisplay = isList ? `${(rule.listItems || []).length} items` : escapeHTML(rule.value);
-          const lastRun = rule.lastRunAt ? `Last run: ${new Date(rule.lastRunAt).toLocaleString()} / ${formatNumber(rule.lastAffected)} rows affected` : "Not run yet";
+          const columnNames = (rule.columns || []).map((entry) => entry.label).join(", ");
+          const lastRun = rule.lastRunAt ? `Last run: ${new Date(rule.lastRunAt).toLocaleString()} / ${formatNumber(rule.lastAffected)} ${isColumnRule ? "columns" : "rows"} affected` : "Not run yet";
+          const effect = isColumnRule
+            ? `<span>-> Hide</span> <code>${formatNumber((rule.columns || []).length)} column${(rule.columns || []).length === 1 ? "" : "s"}</code>`
+            : `<span>-> Hide row</span>`;
           return `<div class="automation-rule ${rule.enabled ? "" : "is-disabled"}">
             <label class="rule-toggle" title="${rule.enabled ? "Disable rule" : "Enable rule"}"><input type="checkbox" data-rule-toggle="${escapeHTML(rule.id)}" ${rule.enabled ? "checked" : ""}></label>
-             <div class="automation-rule-copy"><strong>${escapeHTML(rule.name)}</strong><p><span>${escapeHTML(automationRuleLabel(rule))}</span> ${operator} <code>${isList ? "list" : escapeHTML(rule.value)}</code> <span>-> Hide row</span></p><span class="automation-rule-meta">${isList ? `${valueDisplay} in list / ` : ""}${escapeHTML(lastRun)}</span></div>
+             <div class="automation-rule-copy"><strong>${escapeHTML(rule.name)}</strong><p>${isColumnRule ? `<span>Columns</span> <code>${escapeHTML(columnNames)}</code>` : `<span>${escapeHTML(automationRuleLabel(rule))}</span> ${operator} <code>${isList ? "list" : escapeHTML(rule.value)}</code>`} ${effect}</p><span class="automation-rule-meta">${isColumnRule ? "" : isList ? `${valueDisplay} in list / ` : ""}${escapeHTML(lastRun)}</span></div>
             <div class="automation-rule-actions"><button class="button button-quiet" type="button" data-automation-action="edit" data-rule-id="${escapeHTML(rule.id)}">Edit</button><button class="button button-danger" type="button" data-automation-action="delete" data-rule-id="${escapeHTML(rule.id)}">Delete</button></div>
           </div>`;
         }).join("");
@@ -980,10 +1098,12 @@
         state.editingRuleId = null;
         refs.ruleFormTitle.textContent = "New automation rule";
         refs.ruleNameInput.value = "";
+        refs.ruleActionSelect.value = "hide-rows";
         refs.ruleOperatorSelect.value = "contains";
         refs.ruleValueInput.value = "";
         refs.bulkListInput.value = "";
-        updateBulkListUI();
+        refreshColumnPicker([]);
+        updateRuleTypeUI();
         refreshRuleColumnOptions("product");
         refs.automationForm.hidden = false;
         refs.ruleNameInput.focus();
@@ -995,8 +1115,10 @@
         if (!rule) return;
         setAutomationPanel(true);
         state.editingRuleId = id;
+        const isColumnRule = ruleActionOf(rule) === "hide-columns";
         refs.ruleFormTitle.textContent = "Edit automation rule";
         refs.ruleNameInput.value = rule.name;
+        refs.ruleActionSelect.value = isColumnRule ? "hide-columns" : "hide-rows";
         refs.ruleOperatorSelect.value = rule.operator === "list" ? "list" : rule.operator;
         refs.ruleValueInput.value = rule.value || "";
         if (rule.operator === "list") {
@@ -1004,7 +1126,8 @@
         } else {
           refs.bulkListInput.value = "";
         }
-        updateBulkListUI();
+        refreshColumnPicker(isColumnRule ? (rule.columns || []).map((entry) => entry.index) : []);
+        updateRuleTypeUI();
         refreshRuleColumnOptions(rule.column);
         refs.automationForm.hidden = false;
         refs.ruleNameInput.focus();
@@ -1021,24 +1144,47 @@
       function saveAutomationRule(event) {
         event.preventDefault();
         const name = refs.ruleNameInput.value.trim();
-        const operator = refs.ruleOperatorSelect.value === "list" ? "list" : (refs.ruleOperatorSelect.value === "equals" ? "equals" : "contains");
-        const isList = operator === "list";
-        let value = "";
-        let listItems = [];
-        if (isList) {
-          listItems = parseBulkList(refs.bulkListInput.value);
-          if (!listItems.length) { showToast("Add at least one item to the list before saving.", "error"); return; }
-          value = listItems.join("\n");
-        } else {
-          value = refs.ruleValueInput.value.trim();
-        }
-        if (!name || (!isList && !value)) {
-          showToast("Add a rule name and a value before saving.", "error");
+        const action = refs.ruleActionSelect.value === "hide-columns" ? "hide-columns" : "hide-rows";
+        if (!name) {
+          showToast("Add a rule name before saving.", "error");
           return;
         }
-        const column = refs.ruleColumnSelect.value || "product";
-        const selectedOption = refs.ruleColumnSelect.options[refs.ruleColumnSelect.selectedIndex];
-        const nextRule = { name, column, columnLabel: selectedOption ? selectedOption.textContent : column, operator, value, listItems: isList ? listItems : [] };
+        let nextRule;
+        if (action === "hide-columns") {
+          const sheet = currentSheet();
+          if (!sheet) {
+            showToast("Import a spreadsheet before saving a column rule.", "error");
+            return;
+          }
+          const indexes = pickedColumnIndexes();
+          if (!indexes.length) {
+            showToast("Select at least one column to hide.", "error");
+            return;
+          }
+          nextRule = {
+            name, action, operator: "contains", value: "", listItems: [], column: "product", columnLabel: "Columns",
+            columns: indexes.map((index) => ({ index, label: valueToString(sheet.headers[index]).trim() || `Column ${index + 1}` }))
+          };
+        } else {
+          const operator = refs.ruleOperatorSelect.value === "list" ? "list" : (refs.ruleOperatorSelect.value === "equals" ? "equals" : "contains");
+          const isList = operator === "list";
+          let value = "";
+          let listItems = [];
+          if (isList) {
+            listItems = parseBulkList(refs.bulkListInput.value);
+            if (!listItems.length) { showToast("Add at least one item to the list before saving.", "error"); return; }
+            value = listItems.join("\n");
+          } else {
+            value = refs.ruleValueInput.value.trim();
+          }
+          if (!value) {
+            showToast("Add a value before saving.", "error");
+            return;
+          }
+          const column = refs.ruleColumnSelect.value || "product";
+          const selectedOption = refs.ruleColumnSelect.options[refs.ruleColumnSelect.selectedIndex];
+          nextRule = { name, action, column, columnLabel: selectedOption ? selectedOption.textContent : column, operator, value, listItems: isList ? listItems : [], columns: [] };
+        }
         const existing = state.automationRules.find((rule) => rule.id === state.editingRuleId);
         if (existing) {
           Object.assign(existing, nextRule);
@@ -1063,18 +1209,33 @@
       }
 
       function runAutomation(options = {}) {
-        const enabledRules = state.automationRules.filter((rule) => rule.enabled && (rule.operator === "list" ? (rule.listItems || []).length > 0 : normalizeText(rule.value)));
-        if (!enabledRules.length) return { hiddenCount: 0, enabledCount: 0, changed: false };
+        const enabledRules = state.automationRules.filter((rule) => {
+          if (!rule.enabled) return false;
+          if (ruleActionOf(rule) === "hide-columns") return (rule.columns || []).length > 0;
+          return rule.operator === "list" ? (rule.listItems || []).length > 0 : Boolean(normalizeText(rule.value));
+        });
+        if (!enabledRules.length) return { hiddenCount: 0, hiddenColumnCount: 0, enabledCount: 0, changed: false };
         const before = captureVisibility();
         let hiddenCount = 0;
+        let hiddenColumnCount = 0;
         const runAt = new Date().toISOString();
         enabledRules.forEach((rule) => {
           let affected = 0;
-          state.sheetStates.forEach((sheet) => sheet.rows.forEach((row) => {
-            if (!matchesAutomationRule(row, sheet, rule)) return;
-            affected += 1;
-            if (!row.hidden) { row.hidden = true; hiddenCount += 1; }
-          }));
+          if (ruleActionOf(rule) === "hide-columns") {
+            state.sheetStates.forEach((sheet) => {
+              if (!sheet.hiddenColumns) sheet.hiddenColumns = new Set();
+              resolveRuleColumns(rule, sheet).forEach((index) => {
+                affected += 1;
+                if (!sheet.hiddenColumns.has(index)) { sheet.hiddenColumns.add(index); hiddenColumnCount += 1; }
+              });
+            });
+          } else {
+            state.sheetStates.forEach((sheet) => sheet.rows.forEach((row) => {
+              if (!matchesAutomationRule(row, sheet, rule)) return;
+              affected += 1;
+              if (!row.hidden) { row.hidden = true; hiddenCount += 1; }
+            }));
+          }
           rule.lastAffected = affected;
           rule.lastRunAt = runAt;
         });
@@ -1083,9 +1244,12 @@
         if (changed) state.selectedIds.clear();
         if (options.announce !== false) {
           refresh();
-          showToast(hiddenCount ? `Automation complete: ${formatNumber(hiddenCount)} rows automatically hidden.` : "Automation complete: no new rows were hidden.", hiddenCount ? "success" : "");
+          const parts = [];
+          if (hiddenCount) parts.push(`${formatNumber(hiddenCount)} rows`);
+          if (hiddenColumnCount) parts.push(`${formatNumber(hiddenColumnCount)} columns`);
+          showToast(parts.length ? `Automation complete: ${parts.join(" and ")} automatically hidden.` : "Automation complete: nothing new was hidden.", parts.length ? "success" : "");
         }
-        return { hiddenCount, enabledCount: enabledRules.length, changed };
+        return { hiddenCount, hiddenColumnCount, enabledCount: enabledRules.length, changed };
       }
 
       function matchesSearch(row) {
@@ -1299,6 +1463,7 @@
         refs.hideZeroButton.textContent = loaded && sheet.quantityColumn !== null ? `Hide zero ${valueFieldLabel(sheet)}` : "Hide zero values";
         refs.hideZeroButton.disabled = !loaded || state.loading || sheet.quantityColumn === null;
         refs.restoreAllButton.disabled = !loaded || state.loading || !sheet.rows.some((row) => row.hidden);
+        refs.showColumnsButton.disabled = !loaded || state.loading || hiddenColumnCount(sheet) === 0;
         refs.exportCsvButton.disabled = !loaded || state.loading;
         refs.exportXlsxButton.disabled = !loaded || state.loading || !hasEngine();
         refs.clearButton.disabled = !loaded || state.loading;
@@ -1315,7 +1480,10 @@
          refs.searchInput.placeholder = loaded ? `Search ${productFieldLabel(sheet)}, ${groupingFieldLabel(sheet)}, or any cell...` : "Search record, grouping field, or any cell...";
          refs.topStatus.textContent = state.loading ? `Reading ${state.loadingFileName || state.fileName || "your spreadsheet"}...` : (loaded ? `${state.fileName} / ${formatNumber(sheet.rows.length)} rows` : "Waiting for a spreadsheet");
         refs.tableTitle.textContent = loaded ? `${sheet.name} rows` : "Spreadsheet rows";
-        refs.tableSubtitle.textContent = loaded ? `${formatNumber(sheet.width)} columns detected. Hide rows here, then export the clean result.` : "Import your spreadsheet to begin.";
+        const hiddenColumns = hiddenColumnCount(sheet);
+        refs.tableSubtitle.textContent = loaded
+          ? `${formatNumber(sheet.width)} columns detected${hiddenColumns ? `, ${formatNumber(hiddenColumns)} hidden by rules` : ""}. Hide rows here, then export the clean result.`
+          : "Import your spreadsheet to begin.";
         if (!loaded) {
           refs.quickCopy.innerHTML = "<strong>Nothing to organize yet.</strong>";
         } else {
@@ -1331,7 +1499,8 @@
 
       function rawTable(sheet, groups, rows, selectableRows = rows) {
         const stateOfSelectAll = selectAllState(selectableRows);
-        refs.tableHead.innerHTML = `<tr><th class="row-number">#</th><th class="check-head"><input type="checkbox" aria-label="Select shown rows" data-all-select ${stateOfSelectAll.all ? "checked" : ""}></th>${sheet.headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}<th>Match</th><th class="action-cell">Actions</th></tr>`;
+        const columns = visibleColumnIndexes(sheet);
+        refs.tableHead.innerHTML = `<tr><th class="row-number">#</th><th class="check-head"><input type="checkbox" aria-label="Select shown rows" data-all-select ${stateOfSelectAll.all ? "checked" : ""}></th>${columns.map((index) => `<th>${escapeHTML(sheet.headers[index])}</th>`).join("")}<th>Match</th><th class="action-cell">Actions</th></tr>`;
         refs.tableBody.innerHTML = rows.map((row) => {
           const group = groups.get(duplicateKey(row, sheet));
           const count = group.rows.length;
@@ -1344,7 +1513,7 @@
           return `<tr class="${row.hidden ? "is-hidden" : ""}">
             <td class="row-number-cell">${row.sourceRowNumber}</td>
             <td class="check-cell"><input type="checkbox" aria-label="Select row ${row.sourceRowNumber}" data-row-select="${escapeHTML(row.id)}" ${state.selectedIds.has(row.id) ? "checked" : ""}></td>
-            ${row.values.map((value, index) => `<td data-cell-row="${escapeHTML(row.id)}" data-cell-column="${index}" class="${selectedCellRow && state.selectedCell.columnIndex === index ? "cell-selected" : ""}" title="Click to select this cell">${formatCell(value)}</td>`).join("")}
+            ${columns.map((index) => `<td data-cell-row="${escapeHTML(row.id)}" data-cell-column="${index}" class="${selectedCellRow && state.selectedCell.columnIndex === index ? "cell-selected" : ""}" title="Click to select this cell">${formatCell(row.values[index])}</td>`).join("")}
             <td>${match}${hiddenBadge}</td>
             <td class="action-cell"><button class="row-action ${row.hidden ? "restore" : ""}" type="button" data-action="toggle-row" data-row-id="${escapeHTML(row.id)}" title="${row.hidden ? "Restore this row" : "Hide this row"}">${row.hidden ? "Restore" : "Hide"}</button>${groupAction}</td>
           </tr>`;
@@ -1354,10 +1523,11 @@
       }
 
       function groupDetails(group, sheet) {
+        const columns = visibleColumnIndexes(sheet);
         return `<div class="group-details">
           <div class="details-heading"><span>Original rows in this group</span><span>${group.rows.length} row${group.rows.length === 1 ? "" : "s"}</span></div>
-          <div class="table-scroll"><table class="mini-table"><thead><tr><th>#</th>${sheet.headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}<th class="action-cell">Action</th></tr></thead><tbody>
-            ${group.rows.map((row) => `<tr class="${row.hidden ? "is-hidden" : ""}"><td class="row-number-cell">${row.sourceRowNumber}</td>${row.values.map((value, index) => `<td data-cell-row="${escapeHTML(row.id)}" data-cell-column="${index}" class="${state.selectedCell && state.selectedCell.rowId === row.id && state.selectedCell.columnIndex === index ? "cell-selected" : ""}" title="Click to select this cell">${formatCell(value)}</td>`).join("")}<td class="action-cell"><button class="row-action ${row.hidden ? "restore" : ""}" type="button" data-action="toggle-row" data-row-id="${escapeHTML(row.id)}">${row.hidden ? "Restore" : "Hide"}</button></td></tr>`).join("")}
+          <div class="table-scroll"><table class="mini-table"><thead><tr><th>#</th>${columns.map((index) => `<th>${escapeHTML(sheet.headers[index])}</th>`).join("")}<th class="action-cell">Action</th></tr></thead><tbody>
+            ${group.rows.map((row) => `<tr class="${row.hidden ? "is-hidden" : ""}"><td class="row-number-cell">${row.sourceRowNumber}</td>${columns.map((index) => `<td data-cell-row="${escapeHTML(row.id)}" data-cell-column="${index}" class="${state.selectedCell && state.selectedCell.rowId === row.id && state.selectedCell.columnIndex === index ? "cell-selected" : ""}" title="Click to select this cell">${formatCell(row.values[index])}</td>`).join("")}<td class="action-cell"><button class="row-action ${row.hidden ? "restore" : ""}" type="button" data-action="toggle-row" data-row-id="${escapeHTML(row.id)}">${row.hidden ? "Restore" : "Hide"}</button></td></tr>`).join("")}
           </tbody></table></div>
         </div>`;
       }
@@ -1441,7 +1611,13 @@
       }
 
       function exportRows(sheet) {
-        return [...sheet.prefixRows, sheet.headerValues, ...sheet.rows.filter((row) => !row.hidden).map((row) => row.values.slice())];
+        const columns = visibleColumnIndexes(sheet);
+        const pick = (values) => columns.map((index) => values[index]);
+        return [...sheet.prefixRows.map(pick), pick(sheet.headerValues), ...sheet.rows.filter((row) => !row.hidden).map((row) => pick(row.values))];
+      }
+
+      function hiddenColumnCount(sheet) {
+        return sheet && sheet.hiddenColumns instanceof Set ? sheet.hiddenColumns.size : 0;
       }
 
       function exportBaseName() {
@@ -1483,11 +1659,13 @@
           const outputBook = window.XLSX.utils.book_new();
           state.sheetStates.forEach((sheetState) => {
             const outputSheet = window.XLSX.utils.aoa_to_sheet(exportRows(sheetState));
-            if (sheetState.sourceSheet && sheetState.sourceSheet["!cols"]) outputSheet["!cols"] = sheetState.sourceSheet["!cols"].map((column) => ({ ...column }));
+            if (sheetState.sourceSheet && sheetState.sourceSheet["!cols"]) {
+              outputSheet["!cols"] = visibleColumnIndexes(sheetState).map((index) => ({ ...(sheetState.sourceSheet["!cols"][index] || {}) }));
+            }
             window.XLSX.utils.book_append_sheet(outputBook, outputSheet, sheetState.name);
           });
           window.XLSX.writeFile(outputBook, `${exportBaseName()}.xlsx`, { bookType: "xlsx", compression: true });
-          showToast("XLSX exported with hidden rows removed.", "success");
+          showToast("XLSX exported with hidden rows and columns removed.", "success");
         } catch (error) {
           console.error(error);
           showToast("The workbook could not be exported. Try exporting CSV instead.", "error");
@@ -1560,6 +1738,15 @@
         showToast(count ? `${count} row${count === 1 ? "" : "s"} restored.` : "Everything is already visible.", "success");
       }
 
+      function showHiddenColumns() {
+        const sheet = currentSheet();
+        if (!sheet || !sheet.hiddenColumns || !sheet.hiddenColumns.size) return;
+        const count = sheet.hiddenColumns.size;
+        sheet.hiddenColumns.clear();
+        refresh();
+        showToast(`${formatNumber(count)} column${count === 1 ? "" : "s"} visible again.`, "success");
+      }
+
       function clearWorkspace() {
         state.fileName = "";
         state.sourceType = "";
@@ -1625,7 +1812,13 @@
           const automationResult = runAutomation({ announce: false });
           refresh();
           const sheet = currentSheet();
-          const automationMessage = automationResult.enabledCount ? ` Automation complete: ${formatNumber(automationResult.hiddenCount)} rows automatically hidden.` : "";
+          let automationMessage = "";
+          if (automationResult.enabledCount) {
+            const parts = [];
+            if (automationResult.hiddenCount) parts.push(`${formatNumber(automationResult.hiddenCount)} rows`);
+            if (automationResult.hiddenColumnCount) parts.push(`${formatNumber(automationResult.hiddenColumnCount)} columns`);
+            automationMessage = ` Automation complete: ${parts.length ? `${parts.join(" and ")} automatically hidden.` : "nothing new was hidden."}`;
+          }
           showToast(`${file.name} loaded: ${formatNumber(sheet.rows.length)} data rows ready.${automationMessage}`, "success");
         } catch (error) {
           console.error(error);
@@ -1928,6 +2121,8 @@
       refs.cancelRuleButton.addEventListener("click", cancelAutomationRule);
       refs.automationForm.addEventListener("submit", saveAutomationRule);
       refs.ruleOperatorSelect.addEventListener("change", updateBulkListUI);
+      refs.ruleActionSelect.addEventListener("change", updateRuleTypeUI);
+      refs.clearColumnSelectionButton.addEventListener("click", () => { refreshColumnPicker([]); });
       refs.bulkListInput.addEventListener("input", () => { state.bulkListItems = parseBulkList(refs.bulkListInput.value); refs.bulkListCount.textContent = `${state.bulkListItems.length} item${state.bulkListItems.length === 1 ? "" : "s"}`; });
       refs.bulkListFileInput.addEventListener("change", (e) => { importBulkListFile(e.target.files[0]); e.target.value = ""; });
       refs.clearBulkListButton.addEventListener("click", () => { refs.bulkListInput.value = ""; updateBulkListUI(); });
@@ -1940,6 +2135,7 @@
       refs.nextPageButton.addEventListener("click", () => { state.page += 1; renderTable(); });
       refs.hideZeroButton.addEventListener("click", hideZeroQuantity);
       refs.restoreAllButton.addEventListener("click", restoreAll);
+      refs.showColumnsButton.addEventListener("click", showHiddenColumns);
       refs.exportCsvButton.addEventListener("click", exportCsv);
       refs.exportXlsxButton.addEventListener("click", exportXlsx);
       refs.clearButton.addEventListener("click", clearWorkspace);
